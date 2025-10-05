@@ -1,34 +1,32 @@
-# 🧠 Picolas Hub PRO
+# PICOLAS HUB
 
-**Picolas Hub PRO** es un *hub universal para Roblox* creado por **PicolasYT**, con interfaz RGB, funciones avanzadas y soporte completo para **PC y Mobile**.  
-Diseñado para ofrecer herramientas de movimiento, exploración y personalización dentro del juego, con estilo profesional y sin lag.
-
----
-
-## ✨ Características principales
-
-| Función | Descripción |
-|----------|--------------|
-| 🚫 **Noclip** | Atraviesa paredes y estructuras con un solo click. |
-| 🕊️ **Fly (natural)** | Vuela usando el joystick o las teclas, moviéndote hacia donde mirás con la cámara. |
-| 📍 **TP / TP2** | Guarda una posición y teletransportate cuando quieras. |
-| 👁️ **ESP Players** | Muestra los nombres de todos los jugadores en el mapa. |
-| 🏃‍♂️ **Modo Carrera** | Crea plataformas temporales bajo tus pies al correr, como si volaras caminando. |
-| ⚡ **Control de Velocidad** | Ajustá la velocidad del Fly y Carrera en tiempo real (+ / -). |
-| 🕶️ **Invisibilidad** | Vuelve tu personaje invisible e intangible. |
-| 🌈 **Borde RGB** | Interfaz moderna con efectos de color dinámicos. |
-| 💡 **Botón Flotante RGB** | Ocultá o mostrà el hub sin cerrarlo. |
-| 🔴 **Desactivar Todo** | Apaga todos los modos activos de una sola vez. |
-| ♻️ **Auto Respawn Safe** | El hub se reinicia automáticamente al reaparecer. |
+**Picolas Hub PRO** es un hub universal para Roblox creado por **PicolasYT**, con interfaz RGB, funciones avanzadas y soporte completo para **PC y Mobile**.
 
 ---
 
-## 🧩 Instalación
+## ✨ Funcionalidades
 
-1. Copiá el siguiente código en tu ejecutor de Roblox:
+- 🚫 **Noclip** — atraviesa paredes  
+- 🕊️ **Fly** (natural) — vuela hacia donde mirás  
+- 📍 **TP / TP2** — guarda posición y teletransportate  
+- 👁️ **ESP Players** — muestra nombres de jugadores  
+- 🏃‍♂️ **Modo Carrera** — creas plataformas fugaces bajo tus pies  
+- ⚡ **Control de Velocidad** — ajustás la velocidad del Fly / Carrera  
+- 🕶️ **Invisibilidad (Stealth)** — vuelves transparente  
+- 🌈 **Borde RGB** — estilo gamer animado  
+- 💡 **Botón Flotante RGB** — ocultar/mostrar el hub  
+- 🔴 **Desactivar Todo** — apagar todos los modos rapidísimo  
+- ♻️ **Auto-respawn safe** — reinicia el hub al reaparecer  
+
+---
+
+## 🛠️ Instalación
+
+1. Desde tu ejecutor, pegá:
 
    ```lua
-   loadstring(game:HttpGet("https://raw.githubusercontent.com/picolasYT/jueguito/main/picolas.lua"))()
+   loadstring(game:HttpGet("https://raw.githubusercontent.com/picolasYT/PICOLAS-HUB/main/picolashub.lua"))()
+
 Esperá unos segundos hasta que aparezca la interfaz con borde RGB.
 
 Disfrutá del poder de Picolas Hub PRO 💥
