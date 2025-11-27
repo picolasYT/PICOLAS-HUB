@@ -1,280 +1,459 @@
--- PICOLAS HUB DEV MODE (For YOUR game)
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+---------------------------------------------------------------------
+-- ☆彡 PICOLAS HUB NEON ULTRA ミ☆
+-- GUI PRO + TABS + ESP FIXED + TP PANEL + MOBILE
+---------------------------------------------------------------------
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
-local Lighting = game:GetService("Lighting")
-local player = Players.LocalPlayer
-local cam = workspace.CurrentCamera
+local TweenService = game:GetService("TweenService")
 
-------------------------------------------------------------------
--- CHARACTER
-------------------------------------------------------------------
+local player = Players.LocalPlayer
+local isMobile = UIS.TouchEnabled and not UIS.KeyboardEnabled
+
+---------------------------------------------------------------------
+-- PERSONAJE
+---------------------------------------------------------------------
 local character, humanoid
 local function loadChar()
-    character = player.Character or player.CharacterAdded:Wait()
-    humanoid  = character:WaitForChild("Humanoid")
+	character = player.Character or player.CharacterAdded:Wait()
+	humanoid = character:WaitForChild("Humanoid")
 end
 loadChar()
 player.CharacterAdded:Connect(loadChar)
 
-------------------------------------------------------------------
--- WINDOW
-------------------------------------------------------------------
-local Window = Rayfield:CreateWindow({
-   Name = "☆ PICOLAS HUB DEV ☆",
-   LoadingTitle = "PICOLAS HUB",
-   LoadingSubtitle = "Development Edition",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "PicolasHubDEV",
-      FileName = "Settings"
-   },
-   Discord = {Enabled = false},
-   KeySystem = false
-})
+---------------------------------------------------------------------
+-- GUI BASE
+---------------------------------------------------------------------
+local gui = Instance.new("ScreenGui", player.PlayerGui)
+gui.Name = "PicolasHubUltra"
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 999999
 
-------------------------------------------------------------------
--- TABS
-------------------------------------------------------------------
-local MovTab = Window:CreateTab("🕊 MOV")
-local VisTab = Window:CreateTab("👁 VIS")
-local SysTab = Window:CreateTab("⚙ SYS")
-local TPTab  = Window:CreateTab("📍 TP")
+---------------------------------------------------------------------
+-- FRAME PRINCIPAL
+---------------------------------------------------------------------
+local frame = Instance.new("Frame", gui)
+frame.Size = isMobile and UDim2.new(0,330,0,460) or UDim2.new(0,420,0,360)
+frame.Position = UDim2.new(0.3,0,0.3,0)
+frame.BackgroundColor3 = Color3.fromRGB(5,5,5)
+frame.Active = true
+frame.Draggable = true
+frame.BorderSizePixel = 0
 
-------------------------------------------------------------------
--- STATES
-------------------------------------------------------------------
-local fly, noclip = false, false
-local godmode, autoheal, antiafk = false, false, false
-local fullbright, nightvision, nofog = false, false, false
-local esp, freecam = false, false
-local flySpeed = 60
-local staminaInfinite = false
-local savedTP = {nil, nil}
+Instance.new("UICorner",frame).CornerRadius = UDim.new(0,14)
 
-------------------------------------------------------------------
--- HELPERS
-------------------------------------------------------------------
-local function notify(t,c)
-    Rayfield:Notify({Title=t, Content=c, Duration=2.5})
+-- DOBLE BORDE RGB
+local stroke1 = Instance.new("UIStroke",frame)
+stroke1.Thickness = 3
+local stroke2 = Instance.new("UIStroke",frame)
+stroke2.Thickness = 1
+stroke2.Transparency = 0.5
+
+---------------------------------------------------------------------
+-- TITULO
+---------------------------------------------------------------------
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,-120,0,42)
+title.Position = UDim2.new(0,10,0,6)
+title.Text = "☆彡 PICOLAS HUB NEON ULTRA ミ☆"
+title.Font = Enum.Font.GothamBold
+title.TextScaled = true
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.BackgroundTransparency = 1
+
+---------------------------------------------------------------------
+-- BOTONES HEADER
+---------------------------------------------------------------------
+local function headerBtn(txt,x)
+	local b = Instance.new("TextButton", frame)
+	b.Size = UDim2.new(0,36,0,36)
+	b.Position = UDim2.new(1,-x,0,8)
+	b.Text = txt
+	b.Font = Enum.Font.GothamBold
+	b.TextScaled = true
+	b.BackgroundColor3 = Color3.fromRGB(15,15,15)
+	Instance.new("UICorner",b).CornerRadius = UDim.new(1,0)
+	return b
 end
 
-------------------------------------------------------------------
--- MOV: FLY (camera direction)
-------------------------------------------------------------------
-local flyVel, flyGyro
-local function startFly()
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = character.HumanoidRootPart
-    flyVel = Instance.new("BodyVelocity", hrp)
-    flyVel.MaxForce = Vector3.new(9e9,9e9,9e9)
-    flyVel.Velocity = Vector3.zero
+local minBtn = headerBtn("-",90)
+local closeBtn = headerBtn("X",45)
 
-    flyGyro = Instance.new("BodyGyro", hrp)
-    flyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
-    flyGyro.P = 10000
-    flyGyro.CFrame = cam.CFrame
-end
-local function stopFly()
-    if flyVel then flyVel:Destroy(); flyVel=nil end
-    if flyGyro then flyGyro:Destroy(); flyGyro=nil end
-end
+---------------------------------------------------------------------
+-- BURBUJA
+---------------------------------------------------------------------
+local bubble = Instance.new("TextButton", gui)
+bubble.Size = UDim2.new(0,46,0,46)
+bubble.Position = UDim2.new(0.1,0,0.1,0)
+bubble.Text = "⚡"
+bubble.Visible = false
+bubble.BackgroundColor3 = Color3.fromRGB(10,10,10)
+bubble.Font = Enum.Font.GothamBold
+bubble.TextScaled = true
+bubble.Active=true
+bubble.Draggable=true
+bubble.ZIndex = 10
+Instance.new("UICorner",bubble).CornerRadius = UDim.new(1,0)
+local bubbleStroke = Instance.new("UIStroke",bubble)
+bubbleStroke.Thickness = 3
+
+---------------------------------------------------------------------
+-- RGB ANIMACION
+---------------------------------------------------------------------
+local hue=0
 RunService.Heartbeat:Connect(function()
-    if fly and flyVel and flyGyro then
-        flyVel.Velocity = cam.CFrame.LookVector * flySpeed
-        flyGyro.CFrame = cam.CFrame
-    end
+	hue = (hue + 0.002) % 1
+	local col = Color3.fromHSV(hue,1,1)
+	stroke1.Color = col
+	stroke2.Color = col
+	title.TextColor3 = col
+	bubbleStroke.Color = col
 end)
 
-------------------------------------------------------------------
--- MOV: NOCLIP
-------------------------------------------------------------------
-RunService.Stepped:Connect(function()
-    if noclip and character then
-        for _,p in ipairs(character:GetDescendants()) do
-            if p:IsA("BasePart") then p.CanCollide=false end
-        end
-    end
-end)
+---------------------------------------------------------------------
+-- TABS
+---------------------------------------------------------------------
+local tabs = {}
+local contents = {}
 
-------------------------------------------------------------------
--- VIS: FULLBRIGHT / NIGHT
-------------------------------------------------------------------
-local default = {
-    Brightness = Lighting.Brightness,
-    ClockTime = Lighting.ClockTime,
-    FogEnd = Lighting.FogEnd
-}
-local function applyLighting()
-    if fullbright then
-        Lighting.Brightness = 3
-        Lighting.ClockTime = 14
-    else
-        Lighting.Brightness = default.Brightness
-        Lighting.ClockTime = default.ClockTime
-    end
-    if nightvision then
-        Lighting.ClockTime = 0
-        Lighting.Brightness = 2.5
-    end
-    if nofog then
-        Lighting.FogEnd = 1e6
-    else
-        Lighting.FogEnd = default.FogEnd
-    end
+local function tabButton(name,x)
+	local b = Instance.new("TextButton", frame)
+	b.Text = name
+	b.Size = UDim2.new(0,120,0,32)
+	b.Position = UDim2.new(0,x,0,56)
+	b.BackgroundColor3 = Color3.fromRGB(12,12,12)
+	b.TextColor3 = Color3.fromRGB(255,255,255)
+	b.Font = Enum.Font.GothamBold
+	b.TextScaled = true
+	Instance.new("UICorner",b).CornerRadius = UDim.new(0,8)
+	return b
 end
 
-------------------------------------------------------------------
--- VIS: ESP DEV (players & NPCs)
-------------------------------------------------------------------
-local espFolder = Instance.new("Folder", player.PlayerGui)
-espFolder.Name = "ESP_DEV"
+local movTab = tabButton("MOV",20)
+local visTab = tabButton("VIS",150)
+local sysTab = tabButton("SYS",280)
+
+local function makeContent()
+	local f = Instance.new("Frame", frame)
+	f.Size = UDim2.new(1,-20,1,-120)
+	f.Position = UDim2.new(0,10,0,100)
+	f.BackgroundTransparency = 1
+	f.Visible = false
+	return f
+end
+
+contents.MOV = makeContent()
+contents.VIS = makeContent()
+contents.SYS = makeContent()
+
+local function showTab(name)
+	for k,v in pairs(contents) do
+		v.Visible = (k == name)
+	end
+end
+
+showTab("MOV")
+
+movTab.MouseButton1Click:Connect(function() showTab("MOV") end)
+visTab.MouseButton1Click:Connect(function() showTab("VIS") end)
+sysTab.MouseButton1Click:Connect(function() showTab("SYS") end)
+
+---------------------------------------------------------------------
+-- FUNCION BTN
+---------------------------------------------------------------------
+local function mkBtn(parent,text,y)
+	local b=Instance.new("TextButton",parent)
+	b.Size=UDim2.new(1,-10,0,36)
+	b.Position=UDim2.new(0,5,0,y)
+	b.BackgroundColor3=Color3.fromRGB(12,12,12)
+	b.TextColor3=Color3.fromRGB(255,255,255)
+	b.Font=Enum.Font.GothamBold
+	b.TextScaled=true
+	b.Text=text
+	Instance.new("UICorner",b).CornerRadius=UDim.new(0,8)
+	return b
+end
+
+---------------------------------------------------------------------
+-- BOTONES MOV
+---------------------------------------------------------------------
+local noclipBtn = mkBtn(contents.MOV,"🚫 NOCLIP",10)
+local flyBtn = mkBtn(contents.MOV,"🕊 FLY",56)
+local carreraBtn = mkBtn(contents.MOV,"🏃 MODO CARRERA",102)
+local speedBtn = mkBtn(contents.MOV,"⚡ SPEED +",148)
+local tpMenuBtn = mkBtn(contents.MOV,"📍 TP MENU",194)
+
+---------------------------------------------------------------------
+-- BOTONES VIS
+---------------------------------------------------------------------
+local espBtn = mkBtn(contents.VIS,"👁 ESP NEON",10)
+local invBtn = mkBtn(contents.VIS,"🕶 INVISIBLE",56)
+
+---------------------------------------------------------------------
+-- BOTONES SYS
+---------------------------------------------------------------------
+local offBtn = mkBtn(contents.SYS,"🔴 DESACTIVAR TODO",10)
+
+---------------------------------------------------------------------
+-- TP PANEL MODERNO
+---------------------------------------------------------------------
+local tpPanel = Instance.new("Frame", gui)
+tpPanel.Size = UDim2.new(0,300,0,220)
+tpPanel.Position = UDim2.new(0.35,0,0.35,0)
+tpPanel.BackgroundColor3 = Color3.fromRGB(5,5,5)
+tpPanel.Visible = false
+tpPanel.Active = true
+tpPanel.Draggable = true
+Instance.new("UICorner",tpPanel).CornerRadius = UDim.new(0,12)
+local tpStroke=Instance.new("UIStroke",tpPanel)
+tpStroke.Thickness=2
+
+local tpTitle=Instance.new("TextLabel",tpPanel)
+tpTitle.Size=UDim2.new(1,0,0,40)
+tpTitle.Text="📍 TELEPORT PANEL"
+tpTitle.Font=Enum.Font.GothamBold
+tpTitle.TextScaled=true
+tpTitle.BackgroundTransparency=1
+
+local saveTP=mkBtn(tpPanel,"GUARDAR POSICIÓN",60)
+local goTP=mkBtn(tpPanel,"IR A POSICIÓN",105)
+local closeTP=mkBtn(tpPanel,"CERRAR",150)
+
+---------------------------------------------------------------------
+-- RGB TP PANEL
+---------------------------------------------------------------------
+RunService.Heartbeat:Connect(function()
+	local col = Color3.fromHSV(hue,1,1)
+	tpStroke.Color = col
+	tpTitle.TextColor3 = col
+end)
+
+---------------------------------------------------------------------
+-- FUNCIONES
+---------------------------------------------------------------------
+local noclip=false
+local fly=false
+local carrera=false
+local invis=false
+local esp=false
+local saved=nil
+local flySpeed=60
+local carreraSpeed=40
+local bodyVel
+
+---------------------------------------------------------------------
+-- NOCLIP
+---------------------------------------------------------------------
+RunService.Stepped:Connect(function()
+	if noclip and character then
+		for _,p in pairs(character:GetDescendants()) do
+			if p:IsA("BasePart") then p.CanCollide=false end
+		end
+	end
+end)
+
+noclipBtn.MouseButton1Click:Connect(function()
+	noclip=not noclip
+	noclipBtn.BackgroundColor3=noclip and Color3.fromRGB(0,200,150) or Color3.fromRGB(12,12,12)
+end)
+
+---------------------------------------------------------------------
+-- FLY
+---------------------------------------------------------------------
+flyBtn.MouseButton1Click:Connect(function()
+	fly = not fly
+	flyBtn.BackgroundColor3=fly and Color3.fromRGB(0,200,150) or Color3.fromRGB(12,12,12)
+	if fly then
+		bodyVel=Instance.new("BodyVelocity",character.HumanoidRootPart)
+		bodyVel.MaxForce=Vector3.new(1e6,1e6,1e6)
+	else
+		if bodyVel then bodyVel:Destroy() end
+	end
+end)
+
+RunService.Heartbeat:Connect(function()
+	if fly and bodyVel then
+		bodyVel.Velocity = workspace.CurrentCamera.CFrame.LookVector * flySpeed
+	end
+end)
+
+---------------------------------------------------------------------
+-- CARRERA
+---------------------------------------------------------------------
+local platforms={}
+local function newPlatform()
+	if not carrera then return end
+	local hrp = character.HumanoidRootPart
+	local p = Instance.new("Part",workspace)
+	p.Size=Vector3.new(6,1,6)
+	p.Transparency=0.4
+	p.Anchored=true
+	p.Material=Enum.Material.Neon
+	p.Color=Color3.fromRGB(0,255,255)
+	table.insert(platforms,p)
+	task.spawn(function()
+		while carrera and humanoid.FloorMaterial==Enum.Material.Air do
+			p.Position = hrp.Position - Vector3.new(0,3,0)
+			task.wait()
+		end
+		task.wait(2)
+		p:Destroy()
+	end)
+end
+
+humanoid.Jumping:Connect(function(j)
+	if j then newPlatform() end
+end)
+
+carreraBtn.MouseButton1Click:Connect(function()
+	carrera=not carrera
+	carreraBtn.BackgroundColor3=carrera and Color3.fromRGB(0,200,150) or Color3.fromRGB(12,12,12)
+end)
+
+---------------------------------------------------------------------
+-- SPEED
+---------------------------------------------------------------------
+speedBtn.MouseButton1Click:Connect(function()
+	flySpeed += 15
+	carreraSpeed += 8
+	speedBtn.Text = "⚡ SPEED "..flySpeed
+end)
+
+---------------------------------------------------------------------
+-- INVIS
+---------------------------------------------------------------------
+local function setInv(state)
+	for _,p in pairs(character:GetDescendants()) do
+		if p:IsA("BasePart") then
+			p.LocalTransparencyModifier = state and 1 or 0
+		end
+	end
+end
+
+invBtn.MouseButton1Click:Connect(function()
+	invis=not invis
+	invBtn.BackgroundColor3=invis and Color3.fromRGB(0,200,150) or Color3.fromRGB(12,12,12)
+	setInv(invis)
+end)
+
+---------------------------------------------------------------------
+-- ESP FIXED NEON
+---------------------------------------------------------------------
+local espFolder = Instance.new("Folder", gui)
 
 local function clearESP() espFolder:ClearAllChildren() end
 
-local function attachESP(char)
-    local head = char:FindFirstChild("Head")
-    local hrp  = char:FindFirstChild("HumanoidRootPart")
-    local hum  = char:FindFirstChildOfClass("Humanoid")
-    if not head or not hrp or not hum then return end
+local function createESP(plr)
+	if plr==player then return end
+	local function attach()
+		if not plr.Character then return end
+		local head = plr.Character:FindFirstChild("Head")
+		local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+		if not head or not hrp then return end
 
-    local bill = Instance.new("BillboardGui", espFolder)
-    bill.Adornee=head; bill.Size=UDim2.new(0,160,0,30); bill.AlwaysOnTop=true
+		local bill = Instance.new("BillboardGui", espFolder)
+		bill.Adornee = head
+		bill.Name=plr.Name
+		bill.Size = UDim2.new(0,160,0,35)
+		bill.AlwaysOnTop = true
 
-    local txt = Instance.new("TextLabel", bill)
-    txt.Size=UDim2.new(1,0,1,0); txt.BackgroundTransparency=1
-    txt.Font=Enum.Font.GothamBold; txt.TextScaled=true
-    txt.TextStrokeTransparency=0; txt.TextColor3=Color3.fromRGB(200,255,220)
+		local txt = Instance.new("TextLabel", bill)
+		txt.Size = UDim2.new(1,0,1,0)
+		txt.BackgroundTransparency = 1
+		txt.Font = Enum.Font.GothamBold
+		txt.TextScaled = true
+		txt.TextStrokeTransparency = 0
 
-    RunService.Heartbeat:Connect(function()
-        if hum and hrp and character and character:FindFirstChild("HumanoidRootPart") then
-            local d = math.floor((hrp.Position - character.HumanoidRootPart.Position).Magnitude)
-            txt.Text = char.Name .. " | " .. math.floor(hum.Health) .. " HP | " .. d .. "m"
-        end
-    end)
+		RunService.Heartbeat:Connect(function()
+			if plr.Character and player.Character then
+				local d=math.floor((plr.Character.HumanoidRootPart.Position-player.Character.HumanoidRootPart.Position).Magnitude)
+				txt.Text=plr.Name.." ["..d.."m]"
+				txt.TextColor3=Color3.fromHSV(hue,1,1)
+			end
+		end)
+	end
+	attach()
+	plr.CharacterAdded:Connect(function()
+		task.wait(1)
+		if esp then attach() end
+	end)
 end
 
 local function enableESP()
-    clearESP()
-    for _,p in ipairs(Players:GetPlayers()) do if p.Character then attachESP(p.Character) end end
-    -- NPCs
-    for _,m in ipairs(workspace:GetDescendants()) do
-        if m:IsA("Model") and m:FindFirstChildOfClass("Humanoid") and m:FindFirstChild("HumanoidRootPart") then
-            attachESP(m)
-        end
-    end
+	clearESP()
+	for _,p in pairs(Players:GetPlayers()) do
+		createESP(p)
+	end
 end
 
-Players.PlayerAdded:Connect(function(p) if esp and p.Character then attachESP(p.Character) end end)
-Players.PlayerRemoving:Connect(function(p) if esp then clearESP() enableESP() end end)
-
-------------------------------------------------------------------
--- VIS: FREECAM (simple)
-------------------------------------------------------------------
-local Freecam = require(game:GetService("Players").LocalPlayer.PlayerScripts:WaitForChild("FreeCamera", 2) or Instance.new("ModuleScript"))
--- Fallback simple freecam:
-local freecamConn
-local function toggleFreecam(on)
-    freecam = on
-    if on then
-        freecamConn = RunService:BindToRenderStep("Freecam", Enum.RenderPriority.Camera.Value+1, function()
-            cam.CameraType = Enum.CameraType.Scriptable
-            local cf = cam.CFrame
-            local speed = 0.7
-            if UIS:IsKeyDown(Enum.KeyCode.W) then cf = cf * CFrame.new(0,0,-speed) end
-            if UIS:IsKeyDown(Enum.KeyCode.S) then cf = cf * CFrame.new(0,0,speed) end
-            if UIS:IsKeyDown(Enum.KeyCode.A) then cf = cf * CFrame.new(-speed,0,0) end
-            if UIS:IsKeyDown(Enum.KeyCode.D) then cf = cf * CFrame.new(speed,0,0) end
-            cam.CFrame = cf
-        end)
-    else
-        RunService:UnbindFromRenderStep("Freecam")
-        cam.CameraType = Enum.CameraType.Custom
-    end
-end
-
-------------------------------------------------------------------
--- SYS: GOD / AUTOHEAL
-------------------------------------------------------------------
-RunService.Heartbeat:Connect(function()
-    if godmode and humanoid then humanoid.Health = humanoid.MaxHealth end
-    if autoheal and humanoid then humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + 1) end
+espBtn.MouseButton1Click:Connect(function()
+	esp=not esp
+	espBtn.BackgroundColor3=esp and Color3.fromRGB(0,200,150) or Color3.fromRGB(12,12,12)
+	if esp then enableESP() else clearESP() end
 end)
 
-------------------------------------------------------------------
--- SYS: ANTI-AFK
-------------------------------------------------------------------
-local afkConn
-local function toggleAFK(v)
-    antiafk=v
-    if v then
-        if afkConn then afkConn:Disconnect() end
-        afkConn = player.Idled:Connect(function()
-            game:GetService("VirtualUser"):Button2Down(Vector2.new(0,0), cam.CFrame)
-            task.wait(0.5)
-            game:GetService("VirtualUser"):Button2Up(Vector2.new(0,0), cam.CFrame)
-        end)
-    else
-        if afkConn then afkConn:Disconnect(); afkConn=nil end
-    end
+Players.PlayerAdded:Connect(function(p)
+	if esp then createESP(p) end
+end)
+
+---------------------------------------------------------------------
+-- TP PANEL CONTROL
+---------------------------------------------------------------------
+tpMenuBtn.MouseButton1Click:Connect(function()
+	tpPanel.Visible=true
+end)
+
+closeTP.MouseButton1Click:Connect(function()
+	tpPanel.Visible=false
+end)
+
+saveTP.MouseButton1Click:Connect(function()
+	saved = character.HumanoidRootPart.Position
+end)
+
+goTP.MouseButton1Click:Connect(function()
+	if saved then
+		character.HumanoidRootPart.CFrame = CFrame.new(saved)
+	end
+end)
+
+---------------------------------------------------------------------
+-- DESACTIVAR TODO
+---------------------------------------------------------------------
+local function disableAll()
+	noclip=false fly=false carrera=false invis=false esp=false
+	if bodyVel then bodyVel:Destroy() end
+	clearESP()
+	setInv(false)
+	flySpeed=60
+	speedBtn.Text="⚡ SPEED +"
+	frame.Visible=true bubble.Visible=false
 end
 
-------------------------------------------------------------------
--- TP MINI MENU (TP1 / TP2)
-------------------------------------------------------------------
-local TPMenu = Window:CreateTab("⚡ Config TP")
-TPMenu:CreateButton({Name="Guardar TP1", Callback=function() savedTP[1]=character.HumanoidRootPart.Position; notify("TP","Guardado TP1") end})
-TPMenu:CreateButton({Name="Ir a TP1",      Callback=function() if savedTP[1] then character.HumanoidRootPart.CFrame=CFrame.new(savedTP[1]) end end})
-TPMenu:CreateButton({Name="Guardar TP2", Callback=function() savedTP[2]=character.HumanoidRootPart.Position; notify("TP","Guardado TP2") end})
-TPMenu:CreateButton({Name="Ir a TP2",      Callback=function() if savedTP[2] then character.HumanoidRootPart.CFrame=CFrame.new(savedTP[2]) end end})
-TPMenu:CreateButton({Name="Cerrar", Callback=function() notify("TP","Configurado") end})
+offBtn.MouseButton1Click:Connect(disableAll)
 
-------------------------------------------------------------------
--- UI BUILD
-------------------------------------------------------------------
--- MOV
-MovTab:CreateToggle({Name="Fly", Callback=function(v) fly=v; if v then startFly() else stopFly() end end})
-MovTab:CreateSlider({Name="Fly Speed", Range={10,200}, CurrentValue=flySpeed, Callback=function(v) flySpeed=v end})
-MovTab:CreateToggle({Name="Noclip", Callback=function(v) noclip=v end})
-MovTab:CreateSlider({Name="WalkSpeed", Range={8,200}, CurrentValue=16, Callback=function(v) humanoid.WalkSpeed=v end})
-MovTab:CreateSlider({Name="JumpPower", Range={20,300}, CurrentValue=humanoid.JumpPower, Callback=function(v) humanoid.JumpPower=v end})
-MovTab:CreateToggle({Name="Infinite Stamina (if any)", Callback=function(v) staminaInfinite=v notify("Stamina","ON (si tu sistema existe)") end})
-MovTab:CreateButton({Name="Reset Character", Callback=function() humanoid.Health = 0 end})
+---------------------------------------------------------------------
+-- MINIMIZAR
+---------------------------------------------------------------------
+minBtn.MouseButton1Click:Connect(function()
+	frame.Visible=false
+	bubble.Visible=true
+end)
 
--- VIS
-VisTab:CreateToggle({Name="ESP Dev (Players & NPC)", Callback=function(v) esp=v; if v then enableESP() else clearESP() end end})
-VisTab:CreateToggle({Name="FullBright", Callback=function(v) fullbright=v; applyLighting() end})
-VisTab:CreateToggle({Name="Night Vision", Callback=function(v) nightvision=v; applyLighting() end})
-VisTab:CreateToggle({Name="FreeCam", Callback=function(v) toggleFreecam(v) end})
-VisTab:CreateToggle({Name="No Fog", Callback=function(v) nofog=v; applyLighting() end})
+bubble.MouseButton1Click:Connect(function()
+	frame.Visible=true
+	bubble.Visible=false
+end)
 
--- TP (MAIN)
-TPTab:CreateButton({Name="Configurar TP (abrir mini menú)", Callback=function() notify("TP","Abrí la pestaña 'Config TP'") end})
-TPTab:CreateButton({Name="Zona de Pruebas", Callback=function()
-    local sp = workspace:FindFirstChild("ZonaDePruebas") or workspace:FindFirstChild("TestZone")
-    if sp and sp:IsA("BasePart") then character.HumanoidRootPart.CFrame = sp.CFrame end
-end})
-TPTab:CreateButton({Name="Spawn Principal", Callback=function()
-    local sp = workspace:FindFirstChild("Spawn") or workspace:FindFirstChildWhichIsA("SpawnLocation", true)
-    if sp then character.HumanoidRootPart.CFrame = sp.CFrame end
-end})
+closeBtn.MouseButton1Click:Connect(function()
+	gui:Destroy()
+end)
 
--- SYS
-SysTab:CreateToggle({Name="God Mode (DEV)", Callback=function(v) godmode=v end})
-SysTab:CreateToggle({Name="Auto Heal", Callback=function(v) autoheal=v end})
-SysTab:CreateToggle({Name="Anti-AFK", Callback=function(v) toggleAFK(v) end})
-SysTab:CreateButton({Name="Desactivar TODO", Callback=function()
-    fly=false; noclip=false; godmode=false; autoheal=false; antiafk=false
-    fullbright=false; nightvision=false; nofog=false; esp=false; freecam=false
-    stopFly(); clearESP(); toggleAFK(false); toggleFreecam(false); applyLighting()
-    humanoid.WalkSpeed=16
-    notify("SYS","Todo apagado")
-end})
-SysTab:CreateButton({Name="Guardar Config DEV", Callback=function() notify("SYS","Config guardada por Rayfield") end})
-
-------------------------------------------------------------------
--- READY
-------------------------------------------------------------------
-notify("PICOLAS HUB DEV","Listo ✅")
+---------------------------------------------------------------------
+-- ANIM ENTRADA
+---------------------------------------------------------------------
+frame.Size=UDim2.new(0,0,0,0)
+TweenService:Create(frame,TweenInfo.new(0.3,Enum.EasingStyle.Quint),
+{Size=isMobile and UDim2.new(0,330,0,460) or UDim2.new(0,420,0,360)}):Play()
