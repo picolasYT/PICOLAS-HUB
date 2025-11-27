@@ -1,123 +1,196 @@
--- PICOLAS HUB - RAYFIELD EDITION
+-- ☆ PICOLAS HUB PRO V2 (Rayfield Edition) ☆
+-- Mov | Visual | Teleport | System | Combat
+-- Pensado para tus propios juegos, no abuses en públicos.
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
-local player = Players.LocalPlayer
-local cam = workspace.CurrentCamera
+local Players        = game:GetService("Players")
+local RunService     = game:GetService("RunService")
+local UIS            = game:GetService("UserInputService")
+local TeleportService= game:GetService("TeleportService")
+local Lighting       = game:GetService("Lighting")
+local VirtualUser    = game:GetService("VirtualUser")
 
----------------------------------------------------------------------
--- WINDOW
----------------------------------------------------------------------
+local player = Players.LocalPlayer
+local cam    = workspace.CurrentCamera
+
+------------------------------------------------
+-- GUI
+------------------------------------------------
 
 local Window = Rayfield:CreateWindow({
-   Name = "☆ PICOLAS HUB ☆",
+   Name = "☆ PICOLAS HUB PRO V2 ☆",
    LoadingTitle = "PICOLAS HUB",
-   LoadingSubtitle = "Dark Edition",
+   LoadingSubtitle = "Owner Edition",
    ConfigurationSaving = {
-      Enabled = false,
-      FolderName = nil,
-      FileName = "PicolasHub"
-   },
-   Discord = {
-      Enabled = false
+      Enabled = true,
+      FolderName = "PicolasHub",
+      FileName  = "PicolasHubV2"
    },
    KeySystem = false
 })
 
----------------------------------------------------------------------
--- TABS
----------------------------------------------------------------------
+local MovTab    = Window:CreateTab("🕊 MOV", nil)
+local VisTab    = Window:CreateTab("👁 VISUAL", nil)
+local TPTab     = Window:CreateTab("📍 TELEPORT", nil)
+local SysTab    = Window:CreateTab("⚙ SYSTEM", nil)
+local CombatTab = Window:CreateTab("⚔ COMBAT", nil)
 
-local MovTab = Window:CreateTab("🕊 Mov", nil)
-local VisTab = Window:CreateTab("👁 Visual", nil)
-local SysTab = Window:CreateTab("⚙ System", nil)
-local TPTab  = Window:CreateTab("📍 Teleport", nil)
-
----------------------------------------------------------------------
--- VARIABLES
----------------------------------------------------------------------
+------------------------------------------------
+-- PLAYER DATA
+------------------------------------------------
 
 local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
+local humanoid  = character:WaitForChild("Humanoid")
 
-player.CharacterAdded:Connect(function(c)
-    character = c
-    humanoid = c:WaitForChild("Humanoid")
+player.CharacterAdded:Connect(function(char)
+    character = char
+    humanoid = char:WaitForChild("Humanoid")
 end)
 
-local noclip = false
-local fly = false
-local esp = false
-local invis = false
+------------------------------------------------
+-- VARIABLES
+------------------------------------------------
 
-local flySpeed = 60
-local savedPos
+local fly        = false
+local noclip     = false
+local invis      = false
+local esp        = false
+local boxESP     = false
+local sprint     = false
+local autoheal   = false
+local killAura   = false
+local freecam    = false
+
+local flySpeed        = 60
+local freecamSpeed    = 2
+local killAuraRadius  = 15
+
+local TP1, TP2
 
 local flyVel, flyGyro
+local freecamConn, freecamInputBeginConn, freecamInputEndConn
+local keys = {}
 
----------------------------------------------------------------------
--- FLY PRO (CAMERA CONTROLLED)
----------------------------------------------------------------------
+local lastHit = 0
+
+local ADMIN_GROUP_ID = 0 -- si querés, poné tu groupId acá
+
+------------------------------------------------
+-- FLY
+------------------------------------------------
 
 local function startFly()
-    if not character:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = character.HumanoidRootPart
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-    flyVel = Instance.new("BodyVelocity")
+    flyVel = Instance.new("BodyVelocity", hrp)
     flyVel.MaxForce = Vector3.new(9e9,9e9,9e9)
-    flyVel.Parent = hrp
 
-    flyGyro = Instance.new("BodyGyro")
+    flyGyro = Instance.new("BodyGyro", hrp)
     flyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
     flyGyro.P = 10000
-    flyGyro.CFrame = cam.CFrame
-    flyGyro.Parent = hrp
 end
 
 local function stopFly()
-    if flyVel then flyVel:Destroy() flyVel = nil end
-    if flyGyro then flyGyro:Destroy() flyGyro = nil end
+    if flyVel then flyVel:Destroy() end
+    if flyGyro then flyGyro:Destroy() end
+    flyVel, flyGyro = nil, nil
 end
 
-RunService.Heartbeat:Connect(function()
-    if fly and flyVel and flyGyro then
-        flyVel.Velocity = cam.CFrame.LookVector * flySpeed
-        flyGyro.CFrame = cam.CFrame
-    end
-end)
+------------------------------------------------
+-- FREECAM
+------------------------------------------------
 
----------------------------------------------------------------------
+local function disableFreecam()
+    freecam = false
+    if freecamConn then freecamConn:Disconnect() freecamConn = nil end
+    if freecamInputBeginConn then freecamInputBeginConn:Disconnect() freecamInputBeginConn = nil end
+    if freecamInputEndConn then freecamInputEndConn:Disconnect() freecamInputEndConn = nil end
+    cam.CameraType = Enum.CameraType.Custom
+end
+
+local function enableFreecam()
+    freecam = true
+    cam.CameraType = Enum.CameraType.Scriptable
+
+    local camCF = cam.CFrame
+    local freecamPos = camCF.Position
+
+    keys = {}
+
+    freecamInputBeginConn = UIS.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        if input.KeyCode == Enum.KeyCode.W then keys.W = true end
+        if input.KeyCode == Enum.KeyCode.S then keys.S = true end
+        if input.KeyCode == Enum.KeyCode.A then keys.A = true end
+        if input.KeyCode == Enum.KeyCode.D then keys.D = true end
+        if input.KeyCode == Enum.KeyCode.E then keys.E = true end
+        if input.KeyCode == Enum.KeyCode.Q then keys.Q = true end
+    end)
+
+    freecamInputEndConn = UIS.InputEnded:Connect(function(input, gpe)
+        if input.KeyCode == Enum.KeyCode.W then keys.W = false end
+        if input.KeyCode == Enum.KeyCode.S then keys.S = false end
+        if input.KeyCode == Enum.KeyCode.A then keys.A = false end
+        if input.KeyCode == Enum.KeyCode.D then keys.D = false end
+        if input.KeyCode == Enum.KeyCode.E then keys.E = false end
+        if input.KeyCode == Enum.KeyCode.Q then keys.Q = false end
+    end)
+
+    freecamConn = RunService.RenderStepped:Connect(function(dt)
+        if not freecam then return end
+        local moveDir = Vector3.new()
+
+        if keys.W then moveDir = moveDir + camCF.LookVector end
+        if keys.S then moveDir = moveDir - camCF.LookVector end
+        if keys.A then moveDir = moveDir - camCF.RightVector end
+        if keys.D then moveDir = moveDir + camCF.RightVector end
+        if keys.E then moveDir = moveDir + Vector3.new(0,1,0) end
+        if keys.Q then moveDir = moveDir - Vector3.new(0,1,0) end
+
+        if moveDir.Magnitude > 0 then
+            moveDir = moveDir.Unit
+            freecamPos = freecamPos + moveDir * freecamSpeed
+        end
+
+        camCF = CFrame.new(freecamPos, freecamPos + camCF.LookVector)
+        cam.CFrame = camCF
+    end)
+end
+
+------------------------------------------------
 -- NOCLIP
----------------------------------------------------------------------
+------------------------------------------------
 
 RunService.Stepped:Connect(function()
     if noclip and character then
-        for _,p in pairs(character:GetDescendants()) do
-            if p:IsA("BasePart") then p.CanCollide = false end
+        for _,v in pairs(character:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
         end
     end
 end)
 
----------------------------------------------------------------------
--- INVIS
----------------------------------------------------------------------
+------------------------------------------------
+-- INVISIBLE
+------------------------------------------------
 
 local function setInvisible(state)
-    for _,p in pairs(character:GetDescendants()) do
-        if p:IsA("BasePart") then
-            p.LocalTransparencyModifier = state and 1 or 0
+    if not character then return end
+    for _,v in pairs(character:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.LocalTransparencyModifier = state and 1 or 0
         end
     end
 end
 
----------------------------------------------------------------------
--- ESP SIMPLE
----------------------------------------------------------------------
+------------------------------------------------
+-- ESP NOMBRES
+------------------------------------------------
 
-local espFolder = Instance.new("Folder", player.PlayerGui)
+local espFolder = Instance.new("Folder")
+espFolder.Name = "PicolasESP"
+espFolder.Parent = player:WaitForChild("PlayerGui")
 
 local function clearESP()
     espFolder:ClearAllChildren()
@@ -129,11 +202,12 @@ local function createESP(plr)
         if not plr.Character then return end
         local head = plr.Character:FindFirstChild("Head")
         local hrp  = plr.Character:FindFirstChild("HumanoidRootPart")
-        if not head or not hrp then return end
+        local hum  = plr.Character:FindFirstChildOfClass("Humanoid")
+        if not head or not hrp or not hum then return end
 
         local bill = Instance.new("BillboardGui", espFolder)
         bill.Adornee = head
-        bill.Size = UDim2.new(0,150,0,25)
+        bill.Size = UDim2.new(0,200,0,30)
         bill.AlwaysOnTop = true
         bill.Name = plr.Name
 
@@ -142,13 +216,14 @@ local function createESP(plr)
         txt.BackgroundTransparency = 1
         txt.Font = Enum.Font.GothamBold
         txt.TextScaled = true
-        txt.TextColor3 = Color3.fromRGB(255,255,255)
         txt.TextStrokeTransparency = 0
+        txt.TextColor3 = Color3.fromRGB(255,255,255)
 
         RunService.Heartbeat:Connect(function()
-            if plr.Character and player.Character then
-                local d = math.floor((plr.Character.HumanoidRootPart.Position-player.Character.HumanoidRootPart.Position).Magnitude)
-                txt.Text = plr.Name.." ["..d.."m]"
+            if plr.Character and hum and character and character:FindFirstChild("HumanoidRootPart") then
+                local d  = math.floor((hrp.Position - character.HumanoidRootPart.Position).Magnitude)
+                local hp = math.floor(hum.Health)
+                txt.Text = plr.Name.." | "..hp.." HP | "..d.."m"
             end
         end)
     end
@@ -170,13 +245,114 @@ Players.PlayerAdded:Connect(function(p)
     if esp then createESP(p) end
 end)
 
----------------------------------------------------------------------
+------------------------------------------------
+-- ESP BOXES (Highlight)
+------------------------------------------------
+
+local highlightFolder = Instance.new("Folder")
+highlightFolder.Name = "PicolasHighlightESP"
+highlightFolder.Parent = player.PlayerGui
+
+local function clearBoxESP()
+    highlightFolder:ClearAllChildren()
+end
+
+local function createBoxESP(plr)
+    if plr == player then return end
+    local function attach()
+        if not plr.Character then return end
+        local hl = Instance.new("Highlight")
+        hl.FillTransparency = 0.7
+        hl.OutlineTransparency = 0
+        hl.OutlineColor = Color3.fromRGB(255, 0, 0)
+        hl.Adornee = plr.Character
+        hl.Parent = highlightFolder
+    end
+    attach()
+    plr.CharacterAdded:Connect(function()
+        if boxESP then
+            task.wait(1)
+            attach()
+        end
+    end)
+end
+
+local function enableBoxESP()
+    clearBoxESP()
+    for _,p in pairs(Players:GetPlayers()) do
+        createBoxESP(p)
+    end
+end
+
+Players.PlayerAdded:Connect(function(p)
+    if boxESP then createBoxESP(p) end
+end)
+
+------------------------------------------------
+-- COMBOS: Heartbeat (fly / sprint / autoheal / kill aura)
+------------------------------------------------
+
+RunService.Heartbeat:Connect(function()
+    if fly and flyVel and flyGyro then
+        flyVel.Velocity = cam.CFrame.LookVector * flySpeed
+        flyGyro.CFrame = cam.CFrame
+    end
+
+    if sprint and humanoid then
+        humanoid.WalkSpeed = 80
+    end
+
+    if autoheal and humanoid and humanoid.Health < 60 then
+        humanoid.Health = humanoid.MaxHealth
+    end
+
+    if killAura and character and humanoid and humanoid.Health > 0 then
+        local hrp = character:FindFirstChild("HumanoidRootPart")
+        if hrp and (tick() - lastHit) > 0.3 then
+            local closest, distMin
+            for _,plr in ipairs(Players:GetPlayers()) do
+                if plr ~= player and plr.Character then
+                    local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+                    local phrp= plr.Character:FindFirstChild("HumanoidRootPart")
+                    if hum and hum.Health > 0 and phrp then
+                        local d = (phrp.Position - hrp.Position).Magnitude
+                        if d <= killAuraRadius and (not distMin or d < distMin) then
+                            distMin = d
+                            closest = plr
+                        end
+                    end
+                end
+            end
+
+            if closest and closest.Character then
+                local tool = character:FindFirstChildOfClass("Tool")
+                if tool then
+                    pcall(function() tool:Activate() end)
+                    lastHit = tick()
+                end
+            end
+        end
+    end
+end)
+
+------------------------------------------------
+-- LIGHTING ORIGINAL
+------------------------------------------------
+
+local original = {
+    Brightness = Lighting.Brightness,
+    Clock      = Lighting.ClockTime,
+    Fog        = Lighting.FogEnd
+}
+
+------------------------------------------------
 -- MOV TAB
----------------------------------------------------------------------
+------------------------------------------------
 
 MovTab:CreateToggle({
-    Name = "Fly (Camera Direction)",
+    Name = "Fly",
     CurrentValue = false,
+    Flag = "FlyToggle",
     Callback = function(v)
         fly = v
         if v then startFly() else stopFly() end
@@ -188,26 +364,68 @@ MovTab:CreateSlider({
     Range = {10,200},
     Increment = 5,
     CurrentValue = flySpeed,
-    Callback = function(v)
-        flySpeed = v
-    end
+    Flag = "FlySpeed",
+    Callback = function(v) flySpeed = v end
 })
 
 MovTab:CreateToggle({
     Name = "Noclip",
     CurrentValue = false,
+    Flag = "Noclip",
+    Callback = function(v) noclip = v end
+})
+
+MovTab:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16,200},
+    Increment = 5,
+    CurrentValue = humanoid.WalkSpeed,
+    Flag = "WalkSpeed",
+    Callback = function(v) humanoid.WalkSpeed = v end
+})
+
+MovTab:CreateSlider({
+    Name = "JumpPower",
+    Range = {50,300},
+    Increment = 10,
+    CurrentValue = humanoid.JumpPower,
+    Flag = "JumpPower",
+    Callback = function(v) humanoid.JumpPower = v end
+})
+
+MovTab:CreateToggle({
+    Name = "Auto Sprint",
+    CurrentValue = false,
+    Flag = "AutoSprint",
+    Callback = function(v) sprint = v end
+})
+
+MovTab:CreateToggle({
+    Name = "FreeCam",
+    CurrentValue = false,
+    Flag = "FreeCam",
     Callback = function(v)
-        noclip = v
+        if v then enableFreecam() else disableFreecam() end
     end
 })
 
----------------------------------------------------------------------
+MovTab:CreateSlider({
+    Name = "FreeCam Speed",
+    Range = {1,10},
+    Increment = 1,
+    CurrentValue = freecamSpeed,
+    Flag = "FreeCamSpeed",
+    Callback = function(v) freecamSpeed = v end
+})
+
+------------------------------------------------
 -- VIS TAB
----------------------------------------------------------------------
+------------------------------------------------
 
 VisTab:CreateToggle({
-    Name = "ESP Players",
+    Name = "ESP Players (Texto)",
     CurrentValue = false,
+    Flag = "ESPText",
     Callback = function(v)
         esp = v
         if v then enableESP() else clearESP() end
@@ -215,55 +433,262 @@ VisTab:CreateToggle({
 })
 
 VisTab:CreateToggle({
+    Name = "ESP Boxes (Highlight)",
+    CurrentValue = false,
+    Flag = "ESPBox",
+    Callback = function(v)
+        boxESP = v
+        if v then enableBoxESP() else clearBoxESP() end
+    end
+})
+
+VisTab:CreateToggle({
     Name = "Invisible",
     CurrentValue = false,
+    Flag = "Invisible",
     Callback = function(v)
         invis = v
         setInvisible(v)
     end
 })
 
----------------------------------------------------------------------
--- TP TAB
----------------------------------------------------------------------
-
-TPTab:CreateButton({
-    Name = "Guardar posición",
-    Callback = function()
-        savedPos = character.HumanoidRootPart.Position
-        Rayfield:Notify({
-            Title="TP",
-            Content="Posición guardada",
-            Duration=2
-        })
-    end
-})
-
-TPTab:CreateButton({
-    Name = "Ir a posición",
-    Callback = function()
-        if savedPos then
-            character.HumanoidRootPart.CFrame = CFrame.new(savedPos)
+VisTab:CreateToggle({
+    Name = "FullBright",
+    CurrentValue = false,
+    Flag = "FullBright",
+    Callback = function(v)
+        if v then
+            Lighting.Brightness = 3
+            Lighting.ClockTime = 14
+        else
+            Lighting.Brightness = original.Brightness
+            Lighting.ClockTime = original.Clock
         end
     end
 })
 
----------------------------------------------------------------------
--- SYSTEM
----------------------------------------------------------------------
-
-SysTab:CreateButton({
-    Name = "Desactivar TODO",
-    Callback = function()
-        noclip=false fly=false esp=false invis=false
-        stopFly()
-        clearESP()
-        setInvisible(false)
+VisTab:CreateToggle({
+    Name = "No Fog",
+    CurrentValue = false,
+    Flag = "NoFog",
+    Callback = function(v)
+        if v then
+            Lighting.FogEnd = 999999
+        else
+            Lighting.FogEnd = original.Fog
+        end
     end
 })
 
-Rayfield:Notify({
-   Title = "PICOLAS HUB",
-   Content = "Listo para usar",
-   Duration = 4
+------------------------------------------------
+-- TELEPORT TAB
+------------------------------------------------
+
+TPTab:CreateButton({
+    Name = "Guardar TP1",
+    Callback = function()
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            TP1 = character.HumanoidRootPart.CFrame
+        end
+    end
 })
+
+TPTab:CreateButton({
+    Name = "Ir a TP1",
+    Callback = function()
+        if TP1 and character and character:FindFirstChild("HumanoidRootPart") then
+            character.HumanoidRootPart.CFrame = TP1
+        end
+    end
+})
+
+TPTab:CreateButton({
+    Name = "Guardar TP2",
+    Callback = function()
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            TP2 = character.HumanoidRootPart.CFrame
+        end
+    end
+})
+
+TPTab:CreateButton({
+    Name = "Ir a TP2",
+    Callback = function()
+        if TP2 and character and character:FindFirstChild("HumanoidRootPart") then
+            character.HumanoidRootPart.CFrame = TP2
+        end
+    end
+})
+
+TPTab:CreateInput({
+    Name = "TP a jugador",
+    PlaceholderText = "Nombre exacto",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(text)
+        local target = Players:FindFirstChild(text)
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            if character and character:FindFirstChild("HumanoidRootPart") then
+                character.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
+            end
+        else
+            Rayfield:Notify({
+                Title = "TP",
+                Content = "Jugador no encontrado",
+                Duration = 3
+            })
+        end
+    end
+})
+
+------------------------------------------------
+-- COMBAT TAB
+------------------------------------------------
+
+CombatTab:CreateToggle({
+    Name = "Kill Aura (Tool en mano)",
+    CurrentValue = false,
+    Flag = "KillAura",
+    Callback = function(v)
+        killAura = v
+    end
+})
+
+CombatTab:CreateSlider({
+    Name = "Kill Aura Radio",
+    Range = {5,50},
+    Increment = 1,
+    CurrentValue = killAuraRadius,
+    Flag = "KillAuraRadius",
+    Callback = function(v)
+        killAuraRadius = v
+    end
+})
+
+------------------------------------------------
+-- SYSTEM TAB
+------------------------------------------------
+
+SysTab:CreateToggle({
+    Name = "Auto Heal",
+    CurrentValue = false,
+    Flag = "AutoHeal",
+    Callback = function(v) autoheal = v end
+})
+
+local antiAFKConn
+
+SysTab:CreateToggle({
+    Name = "Anti AFK",
+    CurrentValue = false,
+    Flag = "AntiAFK",
+    Callback = function(v)
+        if v then
+            if not antiAFKConn then
+                antiAFKConn = player.Idled:Connect(function()
+                    VirtualUser:Button2Down(Vector2.new(), cam.CFrame)
+                    task.wait(1)
+                    VirtualUser:Button2Up(Vector2.new(), cam.CFrame)
+                end)
+            end
+        else
+            if antiAFKConn then
+                antiAFKConn:Disconnect()
+                antiAFKConn = nil
+            end
+        end
+    end
+})
+
+SysTab:CreateButton({
+    Name = "Rejoin",
+    Callback = function()
+        TeleportService:Teleport(game.PlaceId, player)
+    end
+})
+
+SysTab:CreateButton({
+    Name = "Reset Character",
+    Callback = function()
+        if player.Character then
+            player.Character:BreakJoints()
+        end
+    end
+})
+
+SysTab:CreateButton({
+    Name = "Scan Admin (Simple)",
+    Callback = function()
+        local found = {}
+        for _,p in ipairs(Players:GetPlayers()) do
+            if p ~= player then
+                local name = string.lower(p.Name.." "..(p.DisplayName or ""))
+                local isAdminName = name:find("admin") or name:find("owner")
+                local inGroup = false
+                if ADMIN_GROUP_ID ~= 0 then
+                    pcall(function()
+                        if p:IsInGroup(ADMIN_GROUP_ID) then
+                            inGroup = true
+                        end
+                    end)
+                end
+                if isAdminName or inGroup then
+                    table.insert(found, p.Name)
+                end
+            end
+        end
+
+        if #found > 0 then
+            Rayfield:Notify({
+                Title = "Admin Detector",
+                Content = "Posibles admins: "..table.concat(found, ", "),
+                Duration = 5
+            })
+        else
+            Rayfield:Notify({
+                Title = "Admin Detector",
+                Content = "No se detectaron admins (scan simple).",
+                Duration = 4
+            })
+        end
+    end
+})
+
+SysTab:CreateButton({
+    Name = "DESACTIVAR TODO",
+    Callback = function()
+        fly      = false
+        noclip   = false
+        invis    = false
+        esp      = false
+        boxESP   = false
+        sprint   = false
+        autoheal = false
+        killAura = false
+        disableFreecam()
+
+        stopFly()
+        clearESP()
+        clearBoxESP()
+        setInvisible(false)
+
+        Rayfield:Notify({
+            Title = "PICOLAS HUB",
+            Content = "Todo desactivado",
+            Duration = 3
+        })
+    end
+})
+
+------------------------------------------------
+-- NOTIFY + CARGA CONFIG
+------------------------------------------------
+
+Rayfield:Notify({
+    Title = "PICOLAS HUB PRO V2",
+    Content = "Cargado correctamente",
+    Duration = 4
+})
+
+pcall(function()
+    Rayfield:LoadConfiguration()
+end)
