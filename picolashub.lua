@@ -785,7 +785,7 @@ SysTab:CreateButton({
 
 Rayfield:Notify({
     Title = "PICOLAS HUB PRO V2.5",
-    Content = "Cargado con Aimbot 😈",
+    Content = "Script creado por PICOLAS 🤑",
     Duration = 4
 })
 
