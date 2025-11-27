@@ -1,15 +1,15 @@
--- ☆ PICOLAS HUB PRO V2 (Rayfield Edition) ☆
--- Mov | Visual | Teleport | System | Combat
+-- ☆ PICOLAS HUB PRO V2.5 (Rayfield Edition) ☆
+-- Mov | Visual | Teleport | System | Combat | Aimbot
 -- Pensado para tus propios juegos, no abuses en públicos.
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local Players        = game:GetService("Players")
-local RunService     = game:GetService("RunService")
-local UIS            = game:GetService("UserInputService")
-local TeleportService= game:GetService("TeleportService")
-local Lighting       = game:GetService("Lighting")
-local VirtualUser    = game:GetService("VirtualUser")
+local Players         = game:GetService("Players")
+local RunService      = game:GetService("RunService")
+local UIS             = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local Lighting        = game:GetService("Lighting")
+local VirtualUser     = game:GetService("VirtualUser")
 
 local player = Players.LocalPlayer
 local cam    = workspace.CurrentCamera
@@ -19,13 +19,13 @@ local cam    = workspace.CurrentCamera
 ------------------------------------------------
 
 local Window = Rayfield:CreateWindow({
-   Name = "☆ PICOLAS HUB PRO V2 ☆",
+   Name = "☆ PICOLAS HUB PRO V2.5 ☆",
    LoadingTitle = "PICOLAS HUB",
    LoadingSubtitle = "Owner Edition",
    ConfigurationSaving = {
       Enabled = true,
       FolderName = "PicolasHub",
-      FileName  = "PicolasHubV2"
+      FileName  = "PicolasHubV2_5"
    },
    KeySystem = false
 })
@@ -62,9 +62,15 @@ local autoheal   = false
 local killAura   = false
 local freecam    = false
 
-local flySpeed        = 60
-local freecamSpeed    = 2
-local killAuraRadius  = 15
+local aimbotEnabled = false
+local aimbotFOV     = 60
+local aimbotOnTeam  = false -- si después querés hacer team check
+
+local holdingAim = false -- si está apretado RMB
+
+local flySpeed       = 60
+local freecamSpeed   = 2
+local killAuraRadius = 15
 
 local TP1, TP2
 
@@ -73,7 +79,6 @@ local freecamConn, freecamInputBeginConn, freecamInputEndConn
 local keys = {}
 
 local lastHit = 0
-
 local ADMIN_GROUP_ID = 0 -- si querés, poné tu groupId acá
 
 ------------------------------------------------
@@ -289,6 +294,61 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 ------------------------------------------------
+-- AIMBOT: helpers
+------------------------------------------------
+
+local function isSameTeam(plr1, plr2)
+    if not plr1 or not plr2 then return false end
+    if plr1.Team and plr2.Team then
+        return plr1.Team == plr2.Team
+    end
+    return false
+end
+
+local function getClosestToCrosshair()
+    local bestPlayer = nil
+    local smallestAngle = nil
+
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character then
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            local head = plr.Character:FindFirstChild("Head")
+            if hum and head and hum.Health > 0 then
+                if not (aimbotOnTeam and isSameTeam(player, plr)) then
+                    local headPos = head.Position
+                    local dir = (headPos - cam.CFrame.Position).Unit
+                    local dot = cam.CFrame.LookVector:Dot(dir)
+                    dot = math.clamp(dot, -1, 1)
+                    local angle = math.deg(math.acos(dot))
+                    if angle <= (aimbotFOV / 2) then
+                        if not smallestAngle or angle < smallestAngle then
+                            smallestAngle = angle
+                            bestPlayer = plr
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return bestPlayer
+end
+
+-- Detectar si está presionado el botón derecho (RMB)
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        holdingAim = true
+    end
+end)
+
+UIS.InputEnded:Connect(function(input, gpe)
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        holdingAim = false
+    end
+end)
+
+------------------------------------------------
 -- COMBOS: Heartbeat (fly / sprint / autoheal / kill aura)
 ------------------------------------------------
 
@@ -331,6 +391,24 @@ RunService.Heartbeat:Connect(function()
                     lastHit = tick()
                 end
             end
+        end
+    end
+end)
+
+------------------------------------------------
+-- AIMBOT LOOP (RenderStepped para que se vea suave)
+------------------------------------------------
+
+RunService.RenderStepped:Connect(function()
+    if not aimbotEnabled or not holdingAim then return end
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+    local target = getClosestToCrosshair()
+    if target and target.Character then
+        local head = target.Character:FindFirstChild("Head")
+        if head then
+            local camPos = cam.CFrame.Position
+            cam.CFrame = CFrame.new(camPos, head.Position)
         end
     end
 end)
@@ -541,7 +619,7 @@ TPTab:CreateInput({
 })
 
 ------------------------------------------------
--- COMBAT TAB
+-- COMBAT TAB (Kill Aura + Aimbot)
 ------------------------------------------------
 
 CombatTab:CreateToggle({
@@ -561,6 +639,26 @@ CombatTab:CreateSlider({
     Flag = "KillAuraRadius",
     Callback = function(v)
         killAuraRadius = v
+    end
+})
+
+CombatTab:CreateToggle({
+    Name = "Aimbot (mantener RMB)",
+    CurrentValue = false,
+    Flag = "Aimbot",
+    Callback = function(v)
+        aimbotEnabled = v
+    end
+})
+
+CombatTab:CreateSlider({
+    Name = "Aimbot FOV",
+    Range = {10,180},
+    Increment = 5,
+    CurrentValue = aimbotFOV,
+    Flag = "AimbotFOV",
+    Callback = function(v)
+        aimbotFOV = v
     end
 })
 
@@ -664,6 +762,8 @@ SysTab:CreateButton({
         sprint   = false
         autoheal = false
         killAura = false
+        aimbotEnabled = false
+        holdingAim = false
         disableFreecam()
 
         stopFly()
@@ -680,12 +780,12 @@ SysTab:CreateButton({
 })
 
 ------------------------------------------------
--- NOTIFY + CARGA CONFIG
+-- NOTIFY + LOAD CONFIG
 ------------------------------------------------
 
 Rayfield:Notify({
-    Title = "PICOLAS HUB PRO V2",
-    Content = "Cargado correctamente",
+    Title = "PICOLAS HUB PRO V2.5",
+    Content = "Cargado con Aimbot 😈",
     Duration = 4
 })
 
