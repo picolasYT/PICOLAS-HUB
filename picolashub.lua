@@ -17,7 +17,6 @@ local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local UserSettings = UserSettings()
 local MAX_DISTANCE = 15 -- Distancia máxima en studs para que actúe el aimbot
-local MAX_DOWN_ANGLE = -35 -- grados máximos hacia abajo permitidos
 
 local player = Players.LocalPlayer
 local cam = workspace.CurrentCamera
@@ -310,52 +309,64 @@ end)
 -- AIMBOT NUEVO
 ------------------------------------------------
 local function getClosest()
+    local mouse = UIS:GetMouseLocation()
+    local best, bestScore = nil, math.huge
+
     local myRoot = character:FindFirstChild("HumanoidRootPart")
     if not myRoot then return nil end
 
-    local closestPlayer = nil
-    local closestDistance = math.huge
-
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= player and plr.Character then
-
             local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-            local enemyRoot = plr.Character:FindFirstChild("HumanoidRootPart")
             local part = getTargetPart(plr.Character)
+            local enemyRoot = plr.Character:FindFirstChild("HumanoidRootPart")
 
-            if hum and enemyRoot and part and hum.Health > 0 then
+            if hum and part and enemyRoot and hum.Health > 0 then
 
-                -- ignorar teammates
-                if ignoreTeam and sameTeam(player, plr) then
-                    continue
-                end
+                -- ✅ FILTRO POR DISTANCIA REAL
+                local realDistance = (enemyRoot.Position - myRoot.Position).Magnitude
+                if realDistance <= MAX_DISTANCE then
 
-                -- distancia REAL
-                local distance = (enemyRoot.Position - myRoot.Position).Magnitude
+                    if not (ignoreTeam and sameTeam(player, plr)) then
+                        local sp, on = cam:WorldToScreenPoint(part.Position)
+                        if on then
+                            local d2 = (Vector2.new(sp.X, sp.Y) - mouse).Magnitude
+                            local score = 1e9
 
-                -- respetar límite de rango
-                if distance <= MAX_DISTANCE then
+                            if aimbotMode == "Circle" then
+                                if d2 <= circleRadius then
+                                    score = d2
+                                end
 
-                    -- 🚫 NO APUNTAR DEMASIADO HACIA ABAJO
-                    local dir = (part.Position - cam.CFrame.Position).Unit
-                    local verticalAngle = math.deg(math.asin(dir.Y))
+                            elseif aimbotMode == "Normal" then
+                                local ang = math.deg(
+                                    math.acos(
+                                        cam.CFrame.LookVector:Dot(
+                                            (part.Position - cam.CFrame.Position).Unit
+                                        )
+                                    )
+                                )
+                                if ang <= aimbotFOV / 2 then
+                                    score = ang
+                                end
 
-                    if verticalAngle < MAX_DOWN_ANGLE then
-                        continue
+                            else -- 360
+                                score = realDistance
+                            end
+
+                            if score < bestScore then
+                                bestScore = score
+                                best = plr
+                            end
+                        end
                     end
 
-                    -- quedarse con el MÁS CERCANO
-                    if distance < closestDistance then
-                        closestDistance = distance
-                        closestPlayer = plr
-                    end
-
-                end
+                end -- fin límite por distancia
             end
         end
     end
 
-    return closestPlayer
+    return best
 end
 
 CombatTab:CreateToggle({Name="Botón Mobile",Callback=function(v)mobileHeld=v end})
@@ -381,10 +392,50 @@ RunService.RenderStepped:Connect(function()
 
     if not aimbotEnabled then currentTarget=nil; return end
 
-    if (not currentTarget) or (not currentTarget.Character) or
-       currentTarget.Character:FindFirstChildOfClass("Humanoid").Health<=0 then
-        currentTarget=getClosest()
+   -- VALIDAR OBJETIVO ACTUAL
+if currentTarget then
+    local hum = currentTarget.Character and currentTarget.Character:FindFirstChildOfClass("Humanoid")
+    local root = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
+
+    -- si murió -> soltar
+    if not hum or hum.Health <= 0 then
+        currentTarget = nil
     end
+
+    -- si se alejó
+    if root then
+        local myRoot = character:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            local dist = (root.Position - myRoot.Position).Magnitude
+            if dist > MAX_DISTANCE + 2 then
+                currentTarget = nil
+            end
+        end
+    end
+end
+
+-- BUSCAR NUEVO OBJETIVO CERCANO
+local newTarget = getClosest()
+
+if newTarget then
+    if not currentTarget then
+        currentTarget = newTarget
+    else
+        local myRoot = character:FindFirstChild("HumanoidRootPart")
+        local oldRoot = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
+        local newRoot = newTarget.Character and newTarget.Character:FindFirstChild("HumanoidRootPart")
+
+        if myRoot and oldRoot and newRoot then
+            local oldDist = (oldRoot.Position - myRoot.Position).Magnitude
+            local newDist = (newRoot.Position - myRoot.Position).Magnitude
+
+            -- si hay uno claramente más cerca -> cambiar
+            if newDist + TARGET_SWITCH_DISTANCE < oldDist then
+                currentTarget = newTarget
+            end
+        end
+    end
+end
 
     if currentTarget and isAiming() then
         local part=getTargetPart(currentTarget.Character)
