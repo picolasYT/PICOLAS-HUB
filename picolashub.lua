@@ -3,8 +3,8 @@
 -- Aimbot nuevo | Freecam completo | Todo recuperado
 -- Desarrollado por PICOLAS 🔥
 
-if getgenv().PicolasHubV4 then return end
-getgenv().PicolasHubV4 = true
+if getgenv().PicolasHubV5 then return end
+getgenv().PicolasHubV5 = true
 
 ------------------------------------------------
 -- LIBRERÍAS / SERVICIOS
@@ -212,6 +212,8 @@ end
 ------------------------------------------------
 local espText,espBox,espHP,espDist,espHL=false,false,false,false,false
 local espObjects={}
+local espLines = false
+local lineOrigin = "Screen" -- "Screen", "Bottom", "Player"
 
 local function clearESP()
     for _,d in pairs(espObjects) do
@@ -226,6 +228,10 @@ local function makeESP(plr)
     d.txt=Drawing.new("Text"); d.txt.Center=true; d.txt.Outline=true; d.txt.Size=16; d.txt.Visible=false
     d.box=Drawing.new("Square"); d.box.Thickness=1; d.box.Visible=false
     d.hp=Drawing.new("Line"); d.hp.Thickness=2; d.hp.Visible=false
+    d.line = Drawing.new("Line")
+d.line.Thickness = 2
+d.line.Color = Color3.fromRGB(255,0,0)
+d.line.Visible = false
     d.hl=Instance.new("Highlight"); d.hl.Enabled=false; d.hl.FillTransparency=.7; d.hl.Parent=plr
     espObjects[plr]=d
 end
@@ -266,6 +272,30 @@ RunService.RenderStepped:Connect(function()
             if espHL then
                 d.hl.Enabled=true; d.hl.Adornee=ch; d.hl.FillColor=Color3.fromRGB(255,0,0)
             else d.hl.Enabled=false end
+
+            -- ✅ ESP LINE / TRACER
+if espLines then
+    local from
+
+    if lineOrigin == "Screen" then
+        from = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
+    elseif lineOrigin == "Bottom" then
+        from = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
+    else -- Player
+        local myRoot = character:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            local p,_ = cam:WorldToViewportPoint(myRoot.Position)
+            from = Vector2.new(p.X, p.Y)
+        end
+    end
+
+    d.line.From = from
+    d.line.To = Vector2.new(pos.X, pos.Y)
+    d.line.Visible = true
+else
+    d.line.Visible = false
+end
+
         else
             if d.txt then d.txt.Visible=false end
             if d.box then d.box.Visible=false end
@@ -426,6 +456,20 @@ VisTab:CreateToggle({Name="ESP Caja",Callback=function(v)espBox=v end})
 VisTab:CreateToggle({Name="ESP Vida",Callback=function(v)espHP=v end})
 VisTab:CreateToggle({Name="Distancia",Callback=function(v)espDist=v end})
 VisTab:CreateToggle({Name="Wallhack",Callback=function(v)espHL=v end})
+VisTab:CreateToggle({
+    Name="ESP Lines",
+    Callback=function(v)
+        espLines = v
+    end
+})
+
+VisTab:CreateDropdown({
+    Name="Origen de líneas",
+    Options={"Screen","Bottom","Player"},
+    Callback=function(v)
+        lineOrigin = v
+    end
+})
 
 CombatTab:CreateToggle({Name="Aimbot",Callback=function(v)aimbotEnabled=v end})
 CombatTab:CreateDropdown({Name="Modo",Options={"Normal","360","Circle"},Callback=function(v)aimbotMode=v end})
