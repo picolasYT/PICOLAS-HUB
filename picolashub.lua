@@ -46,9 +46,9 @@ end)
 -- UI
 ------------------------------------------------
 local Window = Rayfield:CreateWindow({
-    Name = "☆ PICOLAS HUB PRO V4 ☆",
+    Name = "☆ PICOLAS HUB PRO V5 ☆",
     LoadingTitle = "PICOLAS HUB",
-    LoadingSubtitle = "FUSION ULTIMATE",
+    LoadingSubtitle = "El mejor script de ROBLOX está cargando...",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "PicolasHub",
@@ -293,50 +293,45 @@ local function getClosest()
 
             if hum and part and enemyRoot and hum.Health > 0 then
 
-                -- ✅ DISTANCIA REAL
+                -- ✅ FILTRO POR DISTANCIA REAL
                 local realDistance = (enemyRoot.Position - myRoot.Position).Magnitude
                 if realDistance <= MAX_DISTANCE then
 
-                    -- ✅ NO APUNTAR HACIA ABAJO
-                    local cameraY = cam.CFrame.Position.Y
-                    if enemyRoot.Position.Y >= cameraY then
+                    if not (ignoreTeam and sameTeam(player, plr)) then
+                        local sp, on = cam:WorldToScreenPoint(part.Position)
+                        if on then
+                            local d2 = (Vector2.new(sp.X, sp.Y) - mouse).Magnitude
+                            local score = 1e9
 
-                        if not (ignoreTeam and sameTeam(player, plr)) then
-                            local sp, on = cam:WorldToScreenPoint(part.Position)
-                            if on then
-                                local d2 = (Vector2.new(sp.X, sp.Y) - mouse).Magnitude
-                                local score = 1e9
+                            if aimbotMode == "Circle" then
+                                if d2 <= circleRadius then
+                                    score = d2
+                                end
 
-                                if aimbotMode == "Circle" then
-                                    if d2 <= circleRadius then
-                                        score = d2
-                                    end
-
-                                elseif aimbotMode == "Normal" then
-                                    local ang = math.deg(
-                                        math.acos(
-                                            cam.CFrame.LookVector:Dot(
-                                                (part.Position - cam.CFrame.Position).Unit
-                                            )
+                            elseif aimbotMode == "Normal" then
+                                local ang = math.deg(
+                                    math.acos(
+                                        cam.CFrame.LookVector:Dot(
+                                            (part.Position - cam.CFrame.Position).Unit
                                         )
                                     )
-                                    if ang <= aimbotFOV / 2 then
-                                        score = ang
-                                    end
-
-                                else -- 360
-                                    score = realDistance
+                                )
+                                if ang <= aimbotFOV / 2 then
+                                    score = ang
                                 end
 
-                                if score < bestScore then
-                                    bestScore = score
-                                    best = plr
-                                end
+                            else -- 360
+                                score = realDistance
+                            end
+
+                            if score < bestScore then
+                                bestScore = score
+                                best = plr
                             end
                         end
+                    end
 
-                    end -- ← fin NO HACIA ABAJO
-                end -- fin distancia
+                end -- fin límite por distancia
             end
         end
     end
