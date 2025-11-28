@@ -1,7 +1,6 @@
--- ☆ PICOLAS HUB PRO V4 (FUSION ULTIMATE EDITION) ☆
+-- ☆ PICOLAS HUB PRO V5 (FUSION ULTIMATE EDITION) ☆
 -- MOV | VISUAL PRO | TELEPORT | SYSTEM | COMBAT | AIMBOT PRO (MOBILE)
 -- Aimbot nuevo | Freecam completo | Todo recuperado
--- USO EXCLUSIVO EN TUS JUEGOS
 -- Desarrollado por PICOLAS 🔥
 
 if getgenv().PicolasHubV4 then return end
@@ -17,6 +16,7 @@ local UIS = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local UserSettings = UserSettings()
+local MAX_DISTANCE = 15 -- Distancia máxima en studs para que actúe el aimbot
 
 local player = Players.LocalPlayer
 local cam = workspace.CurrentCamera
@@ -279,32 +279,63 @@ end)
 -- AIMBOT NUEVO
 ------------------------------------------------
 local function getClosest()
-    local mouse=UIS:GetMouseLocation()
-    local best,bestScore=nil,math.huge
-    for _,plr in ipairs(Players:GetPlayers()) do
-        if plr~=player and plr.Character then
-            local hum=plr.Character:FindFirstChildOfClass("Humanoid")
-            local part=getTargetPart(plr.Character)
-            if hum and part and hum.Health>0 then
-                if not(ignoreTeam and sameTeam(player,plr)) then
-                    local sp,on=cam:WorldToScreenPoint(part.Position)
-                    if on then
-                        local d2=(Vector2.new(sp.X,sp.Y)-mouse).Magnitude
-                        local score=1e9
-                        if aimbotMode=="Circle" then
-                            if d2<=circleRadius then score=d2 end
-                        elseif aimbotMode=="Normal" then
-                            local ang=math.deg(math.acos(cam.CFrame.LookVector:Dot((part.Position-cam.CFrame.Position).Unit)))
-                            if ang<=aimbotFOV/2 then score=ang end
-                        else
-                            score=(part.Position-cam.CFrame.Position).Magnitude
+    local mouse = UIS:GetMouseLocation()
+    local best, bestScore = nil, math.huge
+
+    local myRoot = character:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return nil end
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character then
+            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+            local part = getTargetPart(plr.Character)
+            local enemyRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+
+            if hum and part and enemyRoot and hum.Health > 0 then
+
+                -- ✅ FILTRO POR DISTANCIA REAL
+                local realDistance = (enemyRoot.Position - myRoot.Position).Magnitude
+                if realDistance <= MAX_DISTANCE then
+
+                    if not (ignoreTeam and sameTeam(player, plr)) then
+                        local sp, on = cam:WorldToScreenPoint(part.Position)
+                        if on then
+                            local d2 = (Vector2.new(sp.X, sp.Y) - mouse).Magnitude
+                            local score = 1e9
+
+                            if aimbotMode == "Circle" then
+                                if d2 <= circleRadius then
+                                    score = d2
+                                end
+
+                            elseif aimbotMode == "Normal" then
+                                local ang = math.deg(
+                                    math.acos(
+                                        cam.CFrame.LookVector:Dot(
+                                            (part.Position - cam.CFrame.Position).Unit
+                                        )
+                                    )
+                                )
+                                if ang <= aimbotFOV / 2 then
+                                    score = ang
+                                end
+
+                            else -- 360
+                                score = realDistance
+                            end
+
+                            if score < bestScore then
+                                bestScore = score
+                                best = plr
+                            end
                         end
-                        if score<bestScore then bestScore=score; best=plr end
                     end
-                end
+
+                end -- fin límite por distancia
             end
         end
     end
+
     return best
 end
 
@@ -424,7 +455,7 @@ SysTab:CreateButton({Name="Rejoin",Callback=function() TeleportService:Teleport(
 -- FINAL
 ------------------------------------------------
 Rayfield:Notify({
-    Title="PICOLAS HUB PRO V4",
+    Title="PICOLAS HUB PRO V5",
     Content="FUSION COMPLETO ACTIVO — Todo integrado",
     Duration=6
 })
