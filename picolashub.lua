@@ -17,6 +17,7 @@ local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local UserSettings = UserSettings()
 local MAX_DISTANCE = 15 -- Distancia máxima en studs para que actúe el aimbot
+local MAX_DOWN_ANGLE = -35 -- grados máximos hacia abajo permitidos
 
 local player = Players.LocalPlayer
 local cam = workspace.CurrentCamera
