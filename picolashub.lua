@@ -336,6 +336,14 @@ local function getClosest()
                 -- respetar límite de rango
                 if distance <= MAX_DISTANCE then
 
+                    -- 🚫 NO APUNTAR DEMASIADO HACIA ABAJO
+                    local dir = (part.Position - cam.CFrame.Position).Unit
+                    local verticalAngle = math.deg(math.asin(dir.Y))
+
+                    if verticalAngle < MAX_DOWN_ANGLE then
+                        continue
+                    end
+
                     -- quedarse con el MÁS CERCANO
                     if distance < closestDistance then
                         closestDistance = distance
