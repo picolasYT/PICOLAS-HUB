@@ -1,7 +1,6 @@
--- ☆ PICOLAS HUB PRO V4 (FUSION ULTIMATE EDITION) ☆
+-- ☆ PICOLAS HUB PRO V5 (FUSION ULTIMATE EDITION) ☆
 -- MOV | VISUAL PRO | TELEPORT | SYSTEM | COMBAT | AIMBOT PRO (MOBILE)
 -- Aimbot nuevo | Freecam completo | Todo recuperado
--- USO EXCLUSIVO EN TUS JUEGOS
 -- Desarrollado por PICOLAS 🔥
 
 if getgenv().PicolasHubV4 then return end
@@ -345,7 +344,6 @@ local function getClosest()
     return best
 end
 
-
 CombatTab:CreateToggle({Name="Botón Mobile",Callback=function(v)mobileHeld=v end})
 local function isAiming()
     if UIS.MouseEnabled then
@@ -462,7 +460,7 @@ SysTab:CreateButton({Name="Rejoin",Callback=function() TeleportService:Teleport(
 -- FINAL
 ------------------------------------------------
 Rayfield:Notify({
-    Title="PICOLAS HUB PRO V4",
+    Title="PICOLAS HUB PRO V5",
     Content="FUSION COMPLETO ACTIVO — Todo integrado",
     Duration=6
 })
