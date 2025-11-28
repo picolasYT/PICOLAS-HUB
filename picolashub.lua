@@ -1,6 +1,7 @@
--- ☆ PICOLAS HUB PRO V5 (FUSION ULTIMATE EDITION) ☆
+-- ☆ PICOLAS HUB PRO V4 (FUSION ULTIMATE EDITION) ☆
 -- MOV | VISUAL PRO | TELEPORT | SYSTEM | COMBAT | AIMBOT PRO (MOBILE)
 -- Aimbot nuevo | Freecam completo | Todo recuperado
+-- USO EXCLUSIVO EN TUS JUEGOS
 -- Desarrollado por PICOLAS 🔥
 
 if getgenv().PicolasHubV4 then return end
@@ -293,48 +294,56 @@ local function getClosest()
 
             if hum and part and enemyRoot and hum.Health > 0 then
 
-                -- ✅ FILTRO POR DISTANCIA REAL
+                -- ✅ DISTANCIA REAL
                 local realDistance = (enemyRoot.Position - myRoot.Position).Magnitude
                 if realDistance <= MAX_DISTANCE then
 
-                    if not (ignoreTeam and sameTeam(player, plr)) then
-                        local sp, on = cam:WorldToScreenPoint(part.Position)
-                        if on then
-                            local d2 = (Vector2.new(sp.X, sp.Y) - mouse).Magnitude
-                            local score = 1e9
+                    -- ✅ NO APUNTAR HACIA ABAJO
+                    local cameraY = cam.CFrame.Position.Y
+                    if enemyRoot.Position.Y >= cameraY then
 
-                            if aimbotMode == "Circle" then
-                                if d2 <= circleRadius then
-                                    score = d2
-                                end
+                        if not (ignoreTeam and sameTeam(player, plr)) then
+                            local sp, on = cam:WorldToScreenPoint(part.Position)
+                            if on then
+                                local d2 = (Vector2.new(sp.X, sp.Y) - mouse).Magnitude
+                                local score = 1e9
 
-                            elseif aimbotMode == "Normal" then
-                                local ang = math.deg(
-                                    math.acos(
-                                        cam.CFrame.LookVector:Dot(
-                                            (part.Position - cam.CFrame.Position).Unit
+                                if aimbotMode == "Circle" then
+                                    if d2 <= circleRadius then
+                                        score = d2
+                                    end
+
+                                elseif aimbotMode == "Normal" then
+                                    local ang = math.deg(
+                                        math.acos(
+                                            cam.CFrame.LookVector:Dot(
+                                                (part.Position - cam.CFrame.Position).Unit
+                                            )
                                         )
                                     )
-                                )
-                                if ang <= aimbotFOV / 2 then
-                                    score = ang
+                                    if ang <= aimbotFOV / 2 then
+                                        score = ang
+                                    end
+
+                                else -- 360
+                                    score = realDistance
                                 end
 
-                            else -- 360
-                                score = realDistance
-                            end
-
-                            if score < bestScore then
-                                bestScore = score
-                                best = plr
+                                if score < bestScore then
+                                    bestScore = score
+                                    best = plr
+                                end
                             end
                         end
-                    end
 
-                end -- fin límite por distancia
+                    end -- ← fin NO HACIA ABAJO
+                end -- fin distancia
             end
         end
     end
+
+    return best
+end
 
     return best
 end
@@ -455,7 +464,7 @@ SysTab:CreateButton({Name="Rejoin",Callback=function() TeleportService:Teleport(
 -- FINAL
 ------------------------------------------------
 Rayfield:Notify({
-    Title="PICOLAS HUB PRO V5",
+    Title="PICOLAS HUB PRO V4",
     Content="FUSION COMPLETO ACTIVO — Todo integrado",
     Duration=6
 })
