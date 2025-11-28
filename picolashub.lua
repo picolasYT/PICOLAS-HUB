@@ -345,9 +345,6 @@ local function getClosest()
     return best
 end
 
-    return best
-end
-
 CombatTab:CreateToggle({Name="Botón Mobile",Callback=function(v)mobileHeld=v end})
 local function isAiming()
     if UIS.MouseEnabled then
