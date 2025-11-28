@@ -427,5 +427,5 @@ CombatTab:CreateToggle({Name="Kill Aura",Callback=function(v) killAura=v end})
 
 SysTab:CreateButton({Name="Rejoin",Callback=function() TeleportService:Teleport(game.PlaceId, player) end})
 
-Rayfield:Notify({Title="PICOLAS HUB PRO V2.5",Content="Aimbot corregido + Círculo visible",Duration=5})
+Rayfield:Notify({Title="PICOLAS HUB PRO V2.5",Content="Creado por PICOLAS, version V2.5",Duration=5})
 pcall(function() Rayfield:LoadConfiguration() end)
