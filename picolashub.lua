@@ -68,8 +68,6 @@ local aimbotCircleRadius = 150
 local aimbotMode         = "Normal"
 local aimbotOnTeam       = false
 
-local holdingAim = false
-
 local flySpeed       = 60
 local freecamSpeed   = 2
 local killAuraRadius = 15
@@ -89,8 +87,12 @@ local original = {
 }
 
 ------------------------------------------------
--- AIMBOT CIRCLE VISUAL
+-- AIMBOT CIRCLE VISUAL (ARCEUS FIX)
 ------------------------------------------------
+
+pcall(function()
+    Drawing = Drawing or {}
+end)
 
 local circle = Drawing.new("Circle")
 circle.Visible = false
@@ -121,12 +123,14 @@ local function startFly()
     local hrp = character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
 
-    flyVel = Instance.new("BodyVelocity", hrp)
+    flyVel = Instance.new("BodyVelocity")
     flyVel.MaxForce = Vector3.new(9e9,9e9,9e9)
+    flyVel.Parent = hrp
 
-    flyGyro = Instance.new("BodyGyro", hrp)
+    flyGyro = Instance.new("BodyGyro")
     flyGyro.MaxTorque = Vector3.new(9e9,9e9,9e9)
     flyGyro.P = 10000
+    flyGyro.Parent = hrp
 end
 
 local function stopFly()
@@ -290,7 +294,7 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 ------------------------------------------------
--- AIMBOT CORE
+-- AIMBOT CORE (CORREGIDO)
 ------------------------------------------------
 
 local function isSameTeam(a,b)
@@ -298,28 +302,40 @@ local function isSameTeam(a,b)
 end
 
 local function getClosest()
-    local best, smallest = nil, nil
+    local best = nil
+    local smallest = nil
 
     for _,plr in ipairs(Players:GetPlayers()) do
         if plr ~= player and plr.Character then
             local head = plr.Character:FindFirstChild("Head")
             local hum = plr.Character:FindFirstChildOfClass("Humanoid")
+
             if hum and hum.Health > 0 and head then
                 if not (aimbotOnTeam and isSameTeam(player, plr)) then
 
                     local screenPos = cam:WorldToViewportPoint(head.Position)
                     local mouse = UIS:GetMouseLocation()
                     local dist2D = (Vector2.new(screenPos.X,screenPos.Y) - mouse).Magnitude
+
                     local dir = (head.Position - cam.CFrame.Position).Unit
                     local angle = math.deg(math.acos(cam.CFrame.LookVector:Dot(dir)))
                     local dist3D = (head.Position - cam.CFrame.Position).Magnitude
 
                     if aimbotMode == "Circle" and dist2D <= aimbotCircleRadius then
-                        if not smallest or dist2D < smallest then smallest = dist2D best = plr end
+                        if not smallest or dist2D < smallest then
+                            smallest = dist2D
+                            best = plr
+                        end
                     elseif aimbotMode == "360" then
-                        if not smallest or dist3D < smallest then smallest = dist3D best = plr end
+                        if not smallest or dist3D < smallest then
+                            smallest = dist3D
+                            best = plr
+                        end
                     elseif aimbotMode == "Normal" and angle <= (aimbotFOV/2) then
-                        if not smallest or angle < smallest then smallest = angle best = plr end
+                        if not smallest or angle < smallest then
+                            smallest = angle
+                            best = plr
+                        end
                     end
                 end
             end
@@ -328,20 +344,13 @@ local function getClosest()
     return best
 end
 
-UIS.InputBegan:Connect(function(i,gpe)
-    if not gpe and i.UserInputType == Enum.UserInputType.MouseButton2 then
-        holdingAim = true
-    end
-end)
-
-UIS.InputEnded:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton2 then
-        holdingAim = false
-    end
-end)
+------------------------------------------------
+-- AIMBOT LOOP (MOBILE)
+------------------------------------------------
 
 RunService.RenderStepped:Connect(function()
-    if not aimbotEnabled or not holdingAim then return end
+    if not aimbotEnabled then return end
+
     local target = getClosest()
     if target and target.Character then
         local head = target.Character:FindFirstChild("Head")
@@ -352,7 +361,7 @@ RunService.RenderStepped:Connect(function()
 end)
 
 ------------------------------------------------
--- COMBOS (Fly / Sprint / AutoHeal / KillAura)
+-- COMBOS
 ------------------------------------------------
 
 RunService.Heartbeat:Connect(function()
@@ -364,26 +373,23 @@ RunService.Heartbeat:Connect(function()
     if sprint and humanoid then humanoid.WalkSpeed = 80 end
     if autoheal and humanoid and humanoid.Health < 60 then humanoid.Health = humanoid.MaxHealth end
 
-    if killAura and character and humanoid and humanoid.Health > 0 then
+    if killAura and character and humanoid.Health > 0 then
         local hrp = character:FindFirstChild("HumanoidRootPart")
-        if hrp and (tick() - lastHit) > 0.3 then
-            local closest, distMin
+        if hrp and tick() - lastHit > 0.3 then
             for _,plr in ipairs(Players:GetPlayers()) do
                 if plr ~= player and plr.Character then
                     local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                    local phrp= plr.Character:FindFirstChild("HumanoidRootPart")
-                    if hum and hum.Health > 0 and phrp then
+                    local phrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                    if hum and phrp and hum.Health > 0 then
                         local d = (phrp.Position - hrp.Position).Magnitude
-                        if d <= killAuraRadius and (not distMin or d < distMin) then
-                            distMin = d
-                            closest = plr
+                        if d <= killAuraRadius then
+                            if character:FindFirstChildOfClass("Tool") then
+                                character:FindFirstChildOfClass("Tool"):Activate()
+                                lastHit = tick()
+                            end
                         end
                     end
                 end
-            end
-            if closest and character:FindFirstChildOfClass("Tool") then
-                pcall(function() character:FindFirstChildOfClass("Tool"):Activate() end)
-                lastHit = tick()
             end
         end
     end
@@ -393,7 +399,6 @@ end)
 -- UI CONTROLS
 ------------------------------------------------
 
--- MOV
 MovTab:CreateToggle({Name="Fly",Callback=function(v) fly=v if v then startFly() else stopFly() end end})
 MovTab:CreateSlider({Name="Fly Speed",Range={10,200},CurrentValue=flySpeed,Callback=function(v) flySpeed=v end})
 MovTab:CreateToggle({Name="Noclip",Callback=function(v) noclip=v end})
@@ -403,96 +408,24 @@ MovTab:CreateToggle({Name="Auto Sprint",Callback=function(v) sprint=v end})
 MovTab:CreateToggle({Name="FreeCam",Callback=function(v) if v then enableFreecam() else disableFreecam() end end})
 MovTab:CreateSlider({Name="FreeCam Speed",Range={1,10},CurrentValue=freecamSpeed,Callback=function(v) freecamSpeed=v end})
 
--- VIS
-VisTab:CreateToggle({Name="ESP Players (Texto)",Callback=function(v) esp=v if v then enableESP() else clearESP() end end})
-VisTab:CreateToggle({Name="ESP Boxes (Highlight)",Callback=function(v) boxESP=v if v then enableBoxESP() else clearBoxESP() end end})
-VisTab:CreateToggle({Name="Invisible",Callback=function(v) invis=v setInvisible(v) end})
+VisTab:CreateToggle({Name="ESP Players",Callback=function(v) esp=v if v then enableESP() else clearESP() end end})
+VisTab:CreateToggle({Name="ESP Boxes",Callback=function(v) boxESP=v if v then enableBoxESP() else clearBoxESP() end end})
+VisTab:CreateToggle({Name="Invisible",Callback=function(v) setInvisible(v) end})
 VisTab:CreateToggle({Name="FullBright",Callback=function(v)
     if v then Lighting.Brightness=3 Lighting.ClockTime=14
     else Lighting.Brightness=original.Brightness Lighting.ClockTime=original.Clock end
 end})
-VisTab:CreateToggle({Name="No Fog",Callback=function(v)
-    if v then Lighting.FogEnd=999999 else Lighting.FogEnd=original.Fog end
-end})
 
--- TELEPORT
 TPTab:CreateButton({Name="Guardar TP1",Callback=function() if character:FindFirstChild("HumanoidRootPart") then TP1=character.HumanoidRootPart.CFrame end end})
-TPTab:CreateButton({Name="Ir a TP1",Callback=function() if TP1 and character:FindFirstChild("HumanoidRootPart") then character.HumanoidRootPart.CFrame=TP1 end end})
-TPTab:CreateButton({Name="Guardar TP2",Callback=function() if character:FindFirstChild("HumanoidRootPart") then TP2=character.HumanoidRootPart.CFrame end end})
-TPTab:CreateButton({Name="Ir a TP2",Callback=function() if TP2 and character:FindFirstChild("HumanoidRootPart") then character.HumanoidRootPart.CFrame=TP2 end end})
-TPTab:CreateInput({Name="TP a jugador",PlaceholderText="Nombre exacto",Callback=function(t)
-    local target=Players:FindFirstChild(t)
-    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-        character.HumanoidRootPart.CFrame=target.Character.HumanoidRootPart.CFrame+Vector3.new(0,3,0)
-    else
-        Rayfield:Notify({Title="TP",Content="Jugador no encontrado",Duration=3})
-    end
-end})
+TPTab:CreateButton({Name="Ir a TP1",Callback=function() if TP1 then character.HumanoidRootPart.CFrame=TP1 end end})
 
--- COMBAT
+CombatTab:CreateToggle({Name="Aimbot",Callback=function(v) aimbotEnabled=v end})
+CombatTab:CreateDropdown({Name="Modo",Options={"Normal","360","Circle"},Callback=function(v) aimbotMode=v end})
+CombatTab:CreateSlider({Name="FOV",Range={10,180},CurrentValue=aimbotFOV,Callback=function(v) aimbotFOV=v end})
+CombatTab:CreateSlider({Name="Radio Circle",Range={20,500},CurrentValue=aimbotCircleRadius,Callback=function(v) aimbotCircleRadius=v end})
 CombatTab:CreateToggle({Name="Kill Aura",Callback=function(v) killAura=v end})
-CombatTab:CreateSlider({Name="Kill Aura Radio",Range={5,50},CurrentValue=killAuraRadius,Callback=function(v) killAuraRadius=v end})
-
-CombatTab:CreateDropdown({
-    Name="Aimbot Mode",
-    Options={"Normal","360","Circle"},
-    CurrentOption="Normal",
-    Callback=function(v) aimbotMode=v end
-})
-
-CombatTab:CreateSlider({Name="Aimbot Circle Radius",Range={10,500},CurrentValue=aimbotCircleRadius,Callback=function(v) aimbotCircleRadius=v end})
-CombatTab:CreateToggle({Name="Aimbot (mantener RMB)",Callback=function(v) aimbotEnabled=v end})
-CombatTab:CreateSlider({Name="Aimbot FOV",Range={10,180},CurrentValue=aimbotFOV,Callback=function(v) aimbotFOV=v end})
-
--- SYSTEM
-SysTab:CreateToggle({Name="Auto Heal",Callback=function(v) autoheal=v end})
-
-local antiAFKConn
-SysTab:CreateToggle({Name="Anti AFK",Callback=function(v)
-    if v then
-        if not antiAFKConn then
-            antiAFKConn=player.Idled:Connect(function()
-                VirtualUser:Button2Down(Vector2.new(), cam.CFrame)
-                task.wait(1)
-                VirtualUser:Button2Up(Vector2.new(), cam.CFrame)
-            end)
-        end
-    else
-        if antiAFKConn then antiAFKConn:Disconnect() antiAFKConn=nil end
-    end
-end})
 
 SysTab:CreateButton({Name="Rejoin",Callback=function() TeleportService:Teleport(game.PlaceId, player) end})
-SysTab:CreateButton({Name="Reset Character",Callback=function() if player.Character then player.Character:BreakJoints() end end})
 
-SysTab:CreateButton({Name="Scan Admin (Simple)",Callback=function()
-    local found={}
-    for _,p in ipairs(Players:GetPlayers()) do
-        if p~=player then
-            local name=string.lower(p.Name.." "..(p.DisplayName or ""))
-            local isAdmin=name:find("admin") or name:find("owner")
-            local inGroup=false
-            if ADMIN_GROUP_ID~=0 then pcall(function() if p:IsInGroup(ADMIN_GROUP_ID) then inGroup=true end end) end
-            if isAdmin or inGroup then table.insert(found,p.Name) end
-        end
-    end
-    if #found>0 then
-        Rayfield:Notify({Title="Admin Detector",Content="Posibles admins: "..table.concat(found,", "),Duration=5})
-    else
-        Rayfield:Notify({Title="Admin Detector",Content="No se detectaron admins.",Duration=4})
-    end
-end})
-
-SysTab:CreateButton({Name="DESACTIVAR TODO",Callback=function()
-    fly=false noclip=false invis=false esp=false boxESP=false sprint=false autoheal=false killAura=false
-    aimbotEnabled=false holdingAim=false disableFreecam()
-    stopFly() clearESP() clearBoxESP() setInvisible(false)
-    Rayfield:Notify({Title="PICOLAS HUB",Content="Todo desactivado",Duration=3})
-end})
-
-------------------------------------------------
--- NOTIFY + LOAD CONFIG
-------------------------------------------------
-
-Rayfield:Notify({Title="PICOLAS HUB PRO V2.5",Content="Script creado por PICOLAS 🤑",Duration=4})
+Rayfield:Notify({Title="PICOLAS HUB PRO V2.5",Content="Aimbot corregido + Círculo visible",Duration=5})
 pcall(function() Rayfield:LoadConfiguration() end)
