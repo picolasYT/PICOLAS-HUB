@@ -1,6 +1,5 @@
 -- ☆ PICOLAS HUB PRO V5 (FUSION ULTIMATE EDITION) ☆
 -- MOV | VISUAL PRO | TELEPORT | SYSTEM | COMBAT | AIMBOT PRO (MOBILE)
--- Aimbot nuevo | Freecam completo | Todo recuperado
 -- Desarrollado por PICOLAS 🔥
 
 if getgenv().PicolasHubV5 then return end
@@ -16,7 +15,9 @@ local UIS = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local UserSettings = UserSettings()
-local MAX_DISTANCE = 15 -- Distancia máxima en studs para que actúe el aimbot
+
+local MAX_DISTANCE = 40
+local TARGET_SWITCH_DISTANCE = 1.5
 
 local player = Players.LocalPlayer
 local cam = workspace.CurrentCamera
@@ -24,14 +25,14 @@ local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 
 ------------------------------------------------
--- RESPAWN FIX (VIEJO)
+-- RESPAWN FIX
 ------------------------------------------------
 local function restoreStates()
     task.wait(0.3)
-    if fly then if startFly then startFly() end end
+    if fly and startFly then startFly() end
     if noclip and character then
         for _,v in pairs(character:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
+            if v:IsA("BasePart") then v.CanCollide=false end
         end
     end
 end
@@ -48,11 +49,11 @@ end)
 local Window = Rayfield:CreateWindow({
     Name = "☆ PICOLAS HUB PRO V5 ☆",
     LoadingTitle = "PICOLAS HUB",
-    LoadingSubtitle = "El mejor script de ROBLOX está cargando...",
+    LoadingSubtitle = "Cargando... Grxias por utilizar el script",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "PicolasHub",
-        FileName = "PicolasHubV4"
+        FileName = "PicolasHubV5"
     }
 })
 
@@ -67,9 +68,7 @@ local SysTab    = Window:CreateTab("⚙ SYSTEM")
 ------------------------------------------------
 fly=false; noclip=false; sprint=false; freecam=false
 flySpeed=60; freecamSpeed=2
-local flyVel, flyGyro
-local keys={}
-local freecamConn
+local flyVel, flyGyro, keys={}, freecamConn
 
 ------------------------------------------------
 -- VARIABLES COMBAT
@@ -78,7 +77,7 @@ killAura=false; autoheal=false
 killAuraRadius=15
 
 ------------------------------------------------
--- VARIABLES AIMBOT (SOLO NUEVO)
+-- VARIABLES AIMBOT
 ------------------------------------------------
 local aimbotEnabled=false
 local aimbotMode="Normal"
@@ -108,7 +107,7 @@ local function getTargetPart(char)
 end
 
 ------------------------------------------------
--- FLY (VIEJO COMPLETO)
+-- FLY
 ------------------------------------------------
 function startFly()
     local hrp=character:FindFirstChild("HumanoidRootPart")
@@ -127,7 +126,7 @@ function stopFly()
 end
 
 ------------------------------------------------
--- FREECAM COMPLETO (VIEJO)
+-- FREECAM
 ------------------------------------------------
 local function disableFreecam()
     freecam=false
@@ -147,12 +146,12 @@ local function enableFreecam()
 
     freecamConn=RunService.RenderStepped:Connect(function()
         local dir=Vector3.new()
-        if keys[Enum.KeyCode.W] then dir+=camCF.LookVector end
-        if keys[Enum.KeyCode.S] then dir-=camCF.LookVector end
-        if keys[Enum.KeyCode.A] then dir-=camCF.RightVector end
-        if keys[Enum.KeyCode.D] then dir+=camCF.RightVector end
-        if keys[Enum.KeyCode.E] then dir+=Vector3.new(0,1,0) end
-        if keys[Enum.KeyCode.Q] then dir-=Vector3.new(0,1,0) end
+        if keys.W then dir+=camCF.LookVector end
+        if keys.S then dir-=camCF.LookVector end
+        if keys.A then dir-=camCF.RightVector end
+        if keys.D then dir+=camCF.RightVector end
+        if keys.E then dir+=Vector3.new(0,1,0) end
+        if keys.Q then dir-=Vector3.new(0,1,0) end
         if dir.Magnitude>0 then pos+=dir.Unit*freecamSpeed end
         camCF=CFrame.new(pos,pos+camCF.LookVector)
         cam.CFrame=camCF
@@ -160,81 +159,25 @@ local function enableFreecam()
 end
 
 ------------------------------------------------
--- NOCLIP
-------------------------------------------------
-RunService.Stepped:Connect(function()
-    if noclip and character then
-        for _,v in pairs(character:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide=false end
-        end
-    end
-end)
-
-------------------------------------------------
--- LOW GRAPHICS (NUEVO)
-------------------------------------------------
-local function setLowGraphics(state)
-    if state then
-        Lighting.GlobalShadows=false
-        Lighting.FogEnd=1e5
-        for _,v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") then
-                v.Material=Enum.Material.SmoothPlastic
-                v.Reflectance=0
-            elseif v:IsA("Decal") or v:IsA("Texture") then
-                v.Transparency=1
-            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
-                v.Enabled=false
-            end
-        end
-        pcall(function()
-            UserSettings.GameSettings.SavedQualityLevel=Enum.SavedQualitySetting.QualityLevel1
-        end)
-    else
-        Rayfield:Notify({Title="Low-GFX",Content="Reiniciá para restaurar gráficos.",Duration=4})
-    end
-end
-
-------------------------------------------------
--- STRIP PERSONAJE (NUEVO)
-------------------------------------------------
-local function stripCharacter()
-    for _,d in ipairs(character:GetDescendants()) do
-        if d:IsA("Decal") or d:IsA("Texture") then d:Destroy() end
-        if d:IsA("Accessory") then d:Destroy() end
-        if d:IsA("Shirt") or d:IsA("Pants") or d:IsA("ShirtGraphic") then d:Destroy() end
-        if d:IsA("ParticleEmitter") then d.Enabled=false end
-    end
-end
-
-------------------------------------------------
--- ESP PRO (NUEVO)
+-- ESP
 ------------------------------------------------
 local espText,espBox,espHP,espDist,espHL=false,false,false,false,false
 local espObjects={}
-local espLines = false
-local lineOrigin = "Screen" -- "Screen", "Bottom", "Player"
-
-local function clearESP()
-    for _,d in pairs(espObjects) do
-        for _,o in pairs(d) do pcall(function() o:Remove() end) end
-    end
-    espObjects={}
-end
+local espLines=false
+local lineOrigin="Screen"
 
 local function makeESP(plr)
     if plr==player then return end
     local d={}
-    d.txt=Drawing.new("Text"); d.txt.Center=true; d.txt.Outline=true; d.txt.Size=16; d.txt.Visible=false
-    d.box=Drawing.new("Square"); d.box.Thickness=1; d.box.Visible=false
-    d.hp=Drawing.new("Line"); d.hp.Thickness=2; d.hp.Visible=false
-    d.line = Drawing.new("Line")
-d.line.Thickness = 2
-d.line.Color = Color3.fromRGB(255,0,0)
-d.line.Visible = false
-    d.hl=Instance.new("Highlight"); d.hl.Enabled=false; d.hl.FillTransparency=.7; d.hl.Parent=plr
+    d.txt=Drawing.new("Text"); d.txt.Center=true; d.txt.Outline=true; d.txt.Size=16
+    d.box=Drawing.new("Square"); d.box.Thickness=1
+    d.hp=Drawing.new("Line"); d.hp.Thickness=2
+    d.line=Drawing.new("Line"); d.line.Thickness=2
+    d.line.Color=Color3.fromRGB(255,0,0)
+    d.hl=Instance.new("Highlight"); d.hl.FillTransparency=.7; d.hl.Parent=plr
     espObjects[plr]=d
 end
+
 Players.PlayerAdded:Connect(makeESP)
 for _,p in ipairs(Players:GetPlayers()) do makeESP(p) end
 
@@ -248,200 +191,116 @@ RunService.RenderStepped:Connect(function()
             local dist=(cam.CFrame.Position-hrp.Position).Magnitude
             local size=math.clamp(1800/dist,28,260)
 
-            if espText then
-                d.txt.Visible=on
-                d.txt.Position=Vector2.new(pos.X,pos.Y-24)
-                d.txt.Text=plr.Name..(espDist and string.format(" | %.0fm",dist) or "")
-            else d.txt.Visible=false end
+            d.txt.Visible=espText and on
+            d.txt.Position=Vector2.new(pos.X,pos.Y-24)
+            d.txt.Text=plr.Name..(espDist and (" | "..math.floor(dist)) or "")
 
-            if espBox then
-                d.box.Visible=on
-                d.box.Position=Vector2.new(pos.X-size/2,pos.Y-size)
-                d.box.Size=Vector2.new(size,size*1.9)
-                d.box.Color=Color3.fromRGB(255,0,0)
-            else d.box.Visible=false end
+            d.box.Visible=espBox and on
+            d.box.Position=Vector2.new(pos.X-size/2,pos.Y-size)
+            d.box.Size=Vector2.new(size,size*1.9)
 
-            if espHP then
-                local hp=hum.Health/hum.MaxHealth
-                d.hp.Visible=on
-                d.hp.From=Vector2.new(pos.X-size/2-4,pos.Y)
-                d.hp.To=Vector2.new(pos.X-size/2-4,pos.Y-(size*1.9*hp))
-                d.hp.Color=Color3.fromRGB(0,255,0)
-            else d.hp.Visible=false end
+            local hp=hum.Health/hum.MaxHealth
+            d.hp.Visible=espHP and on
+            d.hp.From=Vector2.new(pos.X-size/2-4,pos.Y)
+            d.hp.To=Vector2.new(pos.X-size/2-4,pos.Y-(size*1.9*hp))
 
-            if espHL then
-                d.hl.Enabled=true; d.hl.Adornee=ch; d.hl.FillColor=Color3.fromRGB(255,0,0)
-            else d.hl.Enabled=false end
+            d.hl.Enabled=espHL
+            d.hl.Adornee=ch
 
-            -- ✅ ESP LINE / TRACER
-if espLines then
-    local from
-
-    if lineOrigin == "Screen" then
-        from = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
-    elseif lineOrigin == "Bottom" then
-        from = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
-    else -- Player
-        local myRoot = character:FindFirstChild("HumanoidRootPart")
-        if myRoot then
-            local p,_ = cam:WorldToViewportPoint(myRoot.Position)
-            from = Vector2.new(p.X, p.Y)
-        end
-    end
-
-    d.line.From = from
-    d.line.To = Vector2.new(pos.X, pos.Y)
-    d.line.Visible = true
-else
-    d.line.Visible = false
-end
-
+            if espLines then
+                local from
+                if lineOrigin=="Screen" then
+                    from=Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
+                elseif lineOrigin=="Bottom" then
+                    from=Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
+                else
+                    local myRoot=character:FindFirstChild("HumanoidRootPart")
+                    if myRoot then
+                        local p,_=cam:WorldToViewportPoint(myRoot.Position)
+                        from=Vector2.new(p.X,p.Y)
+                    end
+                end
+                d.line.From=from
+                d.line.To=Vector2.new(pos.X,pos.Y)
+                d.line.Visible=true
+            else
+                d.line.Visible=false
+            end
         else
-            if d.txt then d.txt.Visible=false end
-            if d.box then d.box.Visible=false end
-            if d.hp then d.hp.Visible=false end
-            if d.hl then d.hl.Enabled=false end
+            d.txt.Visible=false; d.box.Visible=false; d.hp.Visible=false; d.line.Visible=false; d.hl.Enabled=false
         end
     end
 end)
 
 ------------------------------------------------
--- AIMBOT NUEVO
+-- AIMBOT — PRIORIZA DISTANCIA REAL
 ------------------------------------------------
 local function getClosest()
-    local mouse = UIS:GetMouseLocation()
-    local best, bestScore = nil, math.huge
-
-    local myRoot = character:FindFirstChild("HumanoidRootPart")
+    local myRoot=character:FindFirstChild("HumanoidRootPart")
     if not myRoot then return nil end
 
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= player and plr.Character then
-            local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-            local part = getTargetPart(plr.Character)
-            local enemyRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+    local closest,dist= nil,math.huge
 
-            if hum and part and enemyRoot and hum.Health > 0 then
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr~=player and plr.Character then
+            local hum=plr.Character:FindFirstChildOfClass("Humanoid")
+            local root=plr.Character:FindFirstChild("HumanoidRootPart")
+            local part=getTargetPart(plr.Character)
 
-                -- ✅ FILTRO POR DISTANCIA REAL
-                local realDistance = (enemyRoot.Position - myRoot.Position).Magnitude
-                if realDistance <= MAX_DISTANCE then
-
-                    if not (ignoreTeam and sameTeam(player, plr)) then
-                        local sp, on = cam:WorldToScreenPoint(part.Position)
-                        if on then
-                            local d2 = (Vector2.new(sp.X, sp.Y) - mouse).Magnitude
-                            local score = 1e9
-
-                            if aimbotMode == "Circle" then
-                                if d2 <= circleRadius then
-                                    score = d2
-                                end
-
-                            elseif aimbotMode == "Normal" then
-                                local ang = math.deg(
-                                    math.acos(
-                                        cam.CFrame.LookVector:Dot(
-                                            (part.Position - cam.CFrame.Position).Unit
-                                        )
-                                    )
-                                )
-                                if ang <= aimbotFOV / 2 then
-                                    score = ang
-                                end
-
-                            else -- 360
-                                score = realDistance
-                            end
-
-                            if score < bestScore then
-                                bestScore = score
-                                best = plr
-                            end
-                        end
+            if hum and root and part and hum.Health>0 then
+                if not(ignoreTeam and sameTeam(player,plr)) then
+                    local d=(root.Position-myRoot.Position).Magnitude
+                    if d<dist and d<=MAX_DISTANCE then
+                        closest=plr; dist=d
                     end
-
-                end -- fin límite por distancia
+                end
             end
         end
     end
-
-    return best
+    return closest
 end
 
 CombatTab:CreateToggle({Name="Botón Mobile",Callback=function(v)mobileHeld=v end})
-local function isAiming()
-    if UIS.MouseEnabled then
-        return UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
-    else
-        return mobileHeld
-    end
-end
 
-local circle=Drawing.new("Circle")
-circle.Thickness=2; circle.NumSides=60; circle.Filled=false
-circle.Color=Color3.fromRGB(255,70,70); circle.Visible=false
+local function isAiming()
+    return UIS.MouseEnabled and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) or mobileHeld
+end
 
 RunService.RenderStepped:Connect(function()
-    if aimbotMode=="Circle" and aimbotEnabled then
-        local m=UIS:GetMouseLocation()
-        circle.Position=m; circle.Radius=circleRadius; circle.Visible=true
-    else
-        circle.Visible=false
+    if not aimbotEnabled then currentTarget=nil return end
+
+    -- soltar si muere
+    if currentTarget then
+        local hum=currentTarget.Character and currentTarget.Character:FindFirstChildOfClass("Humanoid")
+        if not hum or hum.Health<=0 then currentTarget=nil end
     end
 
-    if not aimbotEnabled then currentTarget=nil; return end
-
-   -- VALIDAR OBJETIVO ACTUAL
-if currentTarget then
-    local hum = currentTarget.Character and currentTarget.Character:FindFirstChildOfClass("Humanoid")
-    local root = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
-
-    -- si murió -> soltar
-    if not hum or hum.Health <= 0 then
-        currentTarget = nil
-    end
-
-    -- si se alejó
-    if root then
-        local myRoot = character:FindFirstChild("HumanoidRootPart")
-        if myRoot then
-            local dist = (root.Position - myRoot.Position).Magnitude
-            if dist > MAX_DISTANCE + 2 then
-                currentTarget = nil
+    -- elegir mejor
+    local newTarget=getClosest()
+    if newTarget then
+        if not currentTarget then
+            currentTarget=newTarget
+        else
+            local my=character:FindFirstChild("HumanoidRootPart")
+            local old=currentTarget.Character:FindFirstChild("HumanoidRootPart")
+            local new=newTarget.Character:FindFirstChild("HumanoidRootPart")
+            if my and old and new then
+                local dOld=(old.Position-my.Position).Magnitude
+                local dNew=(new.Position-my.Position).Magnitude
+                if dNew + TARGET_SWITCH_DISTANCE < dOld then
+                    currentTarget=newTarget
+                end
             end
         end
     end
-end
-
--- BUSCAR NUEVO OBJETIVO CERCANO
-local newTarget = getClosest()
-
-if newTarget then
-    if not currentTarget then
-        currentTarget = newTarget
-    else
-        local myRoot = character:FindFirstChild("HumanoidRootPart")
-        local oldRoot = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
-        local newRoot = newTarget.Character and newTarget.Character:FindFirstChild("HumanoidRootPart")
-
-        if myRoot and oldRoot and newRoot then
-            local oldDist = (oldRoot.Position - myRoot.Position).Magnitude
-            local newDist = (newRoot.Position - myRoot.Position).Magnitude
-
-            -- si hay uno claramente más cerca -> cambiar
-            if newDist + TARGET_SWITCH_DISTANCE < oldDist then
-                currentTarget = newTarget
-            end
-        end
-    end
-end
 
     if currentTarget and isAiming() then
         local part=getTargetPart(currentTarget.Character)
         if part then
-            local goal=CFrame.new(cam.CFrame.Position,part.Position)
-            cam.CFrame=cam.CFrame:Lerp(goal,smoothSpeed)
+            cam.CFrame=cam.CFrame:Lerp(
+                CFrame.new(cam.CFrame.Position, part.Position),
+                smoothSpeed
+            )
             if autoShoot then
                 pcall(function()
                     local tool=character:FindFirstChildOfClass("Tool")
@@ -453,36 +312,7 @@ end
 end)
 
 ------------------------------------------------
--- COMBOS (VIEJOS)
-------------------------------------------------
-RunService.Heartbeat:Connect(function()
-    if fly and flyVel and flyGyro then
-        flyVel.Velocity=cam.CFrame.LookVector*flySpeed
-        flyGyro.CFrame=cam.CFrame
-    end
-    if sprint then humanoid.WalkSpeed=80 end
-    if autoheal and humanoid.Health<60 then humanoid.Health=humanoid.MaxHealth end
-    if killAura then
-        local hrp=character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            for _,p in pairs(Players:GetPlayers()) do
-                if p~=player and p.Character then
-                    local h=p.Character:FindFirstChildOfClass("Humanoid")
-                    local r=p.Character:FindFirstChild("HumanoidRootPart")
-                    if h and r and h.Health>0 then
-                        if (r.Position-hrp.Position).Magnitude<=killAuraRadius then
-                            local tool=character:FindFirstChildOfClass("Tool")
-                            if tool then tool:Activate() end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-
-------------------------------------------------
--- UI CONTROLS
+-- UI
 ------------------------------------------------
 MovTab:CreateToggle({Name="Fly",Callback=function(v) fly=v if v then startFly() else stopFly() end end})
 MovTab:CreateSlider({Name="Fly Speed",Range={20,200},CurrentValue=flySpeed,Callback=function(v) flySpeed=v end})
@@ -491,34 +321,20 @@ MovTab:CreateToggle({Name="Sprint",Callback=function(v) sprint=v end})
 MovTab:CreateToggle({Name="Freecam",Callback=function(v) if v then enableFreecam() else disableFreecam() end end})
 MovTab:CreateSlider({Name="Freecam Speed",Range={1,10},CurrentValue=freecamSpeed,Callback=function(v) freecamSpeed=v end})
 
-VisTab:CreateToggle({Name="ESP Nombre",Callback=function(v)espText=v end})
-VisTab:CreateToggle({Name="ESP Caja",Callback=function(v)espBox=v end})
-VisTab:CreateToggle({Name="ESP Vida",Callback=function(v)espHP=v end})
-VisTab:CreateToggle({Name="Distancia",Callback=function(v)espDist=v end})
-VisTab:CreateToggle({Name="Wallhack",Callback=function(v)espHL=v end})
-VisTab:CreateToggle({
-    Name="ESP Lines",
-    Callback=function(v)
-        espLines = v
-    end
-})
-
-VisTab:CreateDropdown({
-    Name="Origen de líneas",
-    Options={"Screen","Bottom","Player"},
-    Callback=function(v)
-        lineOrigin = v
-    end
-})
+VisTab:CreateToggle({Name="ESP Nombre",Callback=function(v) espText=v end})
+VisTab:CreateToggle({Name="ESP Caja",Callback=function(v) espBox=v end})
+VisTab:CreateToggle({Name="ESP Vida",Callback=function(v) espHP=v end})
+VisTab:CreateToggle({Name="Distancia",Callback=function(v) espDist=v end})
+VisTab:CreateToggle({Name="Wallhack",Callback=function(v) espHL=v end})
+VisTab:CreateToggle({Name="ESP Lines",Callback=function(v) espLines=v end})
+VisTab:CreateDropdown({Name="Origen líneas",Options={"Screen","Bottom","Player"},Callback=function(v) lineOrigin=v end})
 
 CombatTab:CreateToggle({Name="Aimbot",Callback=function(v)aimbotEnabled=v end})
 CombatTab:CreateDropdown({Name="Modo",Options={"Normal","360","Circle"},Callback=function(v)aimbotMode=v end})
 CombatTab:CreateDropdown({Name="Objetivo",Options={"Head","Torso","Random"},Callback=function(v)targetPart=v end})
 CombatTab:CreateToggle({Name="Ignorar Team",Callback=function(v)ignoreTeam=v end})
 CombatTab:CreateToggle({Name="Auto Shoot",Callback=function(v)autoShoot=v end})
-CombatTab:CreateSlider({Name="FOV",Range={20,180},CurrentValue=aimbotFOV,Callback=function(v)aimbotFOV=v end})
-CombatTab:CreateSlider({Name="Circle Radius",Range={20,500},CurrentValue=circleRadius,Callback=function(v)circleRadius=v end})
-CombatTab:CreateSlider({Name="Smooth",Range={0.05,0.45},Increment=0.01,CurrentValue=smoothSpeed,Callback=function(v)smoothSpeed=v end})
+CombatTab:CreateSlider({Name="Smooth",Range={0.05,0.45},CurrentValue=smoothSpeed,Callback=function(v)smoothSpeed=v end})
 CombatTab:CreateToggle({Name="Kill Aura",Callback=function(v)killAura=v end})
 CombatTab:CreateToggle({Name="Auto Heal",Callback=function(v)autoheal=v end})
 
@@ -526,22 +342,30 @@ TPTab:CreateButton({Name="Guardar TP1",Callback=function()
     local hrp=character:FindFirstChild("HumanoidRootPart")
     if hrp then _G.TP1=hrp.CFrame end
 end})
+
 TPTab:CreateButton({Name="Ir TP1",Callback=function()
     local hrp=character:FindFirstChild("HumanoidRootPart")
     if _G.TP1 and hrp then hrp.CFrame=_G.TP1 end
 end})
 
-SysTab:CreateToggle({Name="Low Graphics EXTREMO",Callback=setLowGraphics})
-SysTab:CreateButton({Name="Quitar cara/ropa/accesorios",Callback=stripCharacter})
-SysTab:CreateButton({Name="Rejoin",Callback=function() TeleportService:Teleport(game.PlaceId,player) end})
+SysTab:CreateToggle({Name="Low Graphics",Callback=function(v)
+    if v then
+        Lighting.GlobalShadows=false
+        Lighting.FogEnd=1e5
+    end
+end})
+
+SysTab:CreateButton({Name="Rejoin",Callback=function()
+    TeleportService:Teleport(game.PlaceId,player)
+end})
 
 ------------------------------------------------
 -- FINAL
 ------------------------------------------------
 Rayfield:Notify({
     Title="PICOLAS HUB PRO V5",
-    Content="FUSION COMPLETO ACTIVO — Todo integrado",
-    Duration=6
+    Content="CARGADO CORRECTAMENTE",
+    Duration=5
 })
 
 pcall(function() Rayfield:LoadConfiguration() end)
