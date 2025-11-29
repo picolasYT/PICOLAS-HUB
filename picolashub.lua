@@ -10,7 +10,10 @@ getgenv().PicolasHubV5 = true
 ------------------------------------------------
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
 local Players = game:GetService("Players")
-local  = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local Lighting = game:GetService("Lighting")
 local UserSettings = UserSettings()
 
 local MAX_DISTANCE = 40
