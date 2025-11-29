@@ -16,8 +16,7 @@ local UIS = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local UserSettings = UserSettings()
-local MAX_DISTANCE = 60 -- Distancia máxima en studs para que actúe el aimbot
-local TARGET_SWITCH_DISTANCE = 5 -- Distancia extra para cambiar de objetivo
+local MAX_DISTANCE = 15 -- Distancia máxima en studs para que actúe el aimbot
 
 local player = Players.LocalPlayer
 local cam = workspace.CurrentCamera
@@ -53,7 +52,7 @@ local Window = Rayfield:CreateWindow({
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "PicolasHub",
-        FileName = "PicolasHubV4"
+        FileName = "PicolasHubV5"
     }
 })
 
@@ -84,7 +83,7 @@ killAuraRadius=15
 local aimbotEnabled=false
 local aimbotMode="Normal"
 local targetPart="Head"
-local aimbotFOV=120
+local aimbotFOV=80
 local circleRadius=150
 local smoothSpeed=0.18
 local autoShoot=false
@@ -370,10 +369,7 @@ local function getClosest()
     return best
 end
 
-local function isAiming()
-    return true
-end
-
+CombatTab:CreateToggle({Name="Botón Mobile",Callback=function(v)mobileHeld=v end})
 local function isAiming()
     if UIS.MouseEnabled then
         return UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
@@ -396,50 +392,10 @@ RunService.RenderStepped:Connect(function()
 
     if not aimbotEnabled then currentTarget=nil; return end
 
-   -- VALIDAR OBJETIVO ACTUAL
-if currentTarget then
-    local hum = currentTarget.Character and currentTarget.Character:FindFirstChildOfClass("Humanoid")
-    local root = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
-
-    -- si murió -> soltar
-    if not hum or hum.Health <= 0 then
-        currentTarget = nil
+    if (not currentTarget) or (not currentTarget.Character) or
+       currentTarget.Character:FindFirstChildOfClass("Humanoid").Health<=0 then
+        currentTarget=getClosest()
     end
-
-    -- si se alejó
-    if root then
-        local myRoot = character:FindFirstChild("HumanoidRootPart")
-        if myRoot then
-            local dist = (root.Position - myRoot.Position).Magnitude
-            if dist > MAX_DISTANCE + 2 then
-                currentTarget = nil
-            end
-        end
-    end
-end
-
--- BUSCAR NUEVO OBJETIVO CERCANO
-local newTarget = getClosest()
-
-if newTarget then
-    if not currentTarget then
-        currentTarget = newTarget
-    else
-        local myRoot = character:FindFirstChild("HumanoidRootPart")
-        local oldRoot = currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart")
-        local newRoot = newTarget.Character and newTarget.Character:FindFirstChild("HumanoidRootPart")
-
-        if myRoot and oldRoot and newRoot then
-            local oldDist = (oldRoot.Position - myRoot.Position).Magnitude
-            local newDist = (newRoot.Position - myRoot.Position).Magnitude
-
-            -- si hay uno claramente más cerca -> cambiar
-            if newDist + TARGET_SWITCH_DISTANCE < oldDist then
-                currentTarget = newTarget
-            end
-        end
-    end
-end
 
     if currentTarget and isAiming() then
         local part=getTargetPart(currentTarget.Character)
