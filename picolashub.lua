@@ -49,7 +49,7 @@ end)
 local Window = Rayfield:CreateWindow({
     Name = "☆ PICOLAS HUB PRO V5 ☆",
     LoadingTitle = "PICOLAS HUB",
-    LoadingSubtitle = "Cargando... Grxias por utilizar el script",
+    LoadingSubtitle = "FUSION ULTIMATE",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "PicolasHub",
@@ -107,13 +107,14 @@ local function getTargetPart(char)
 end
 
 ------------------------------------------------
--- FLY
+-- FLY (Infinite Yield Style)
 ------------------------------------------------
 function startFly()
     local hrp=character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     flyVel=Instance.new("BodyVelocity",hrp)
     flyVel.MaxForce=Vector3.new(9e9,9e9,9e9)
+    flyVel.Velocity=Vector3.new(0,0,0)
     flyGyro=Instance.new("BodyGyro",hrp)
     flyGyro.MaxTorque=Vector3.new(9e9,9e9,9e9)
     flyGyro.P=10000
@@ -124,6 +125,29 @@ function stopFly()
     if flyGyro then flyGyro:Destroy() end
     flyVel=nil; flyGyro=nil
 end
+
+------------------------------------------------
+-- SPRINT (Infinite Yield Style)
+------------------------------------------------
+local sprinting = false
+local origWalkSpeed = humanoid.WalkSpeed
+local sprintSpeed = 50
+
+UIS.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.LeftShift then
+        sprinting = true
+        humanoid.WalkSpeed = sprintSpeed
+    end
+end)
+
+UIS.InputEnded:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.LeftShift then
+        sprinting = false
+        humanoid.WalkSpeed = origWalkSpeed
+    end
+end)
 
 ------------------------------------------------
 -- FREECAM
@@ -196,7 +220,7 @@ RunService.RenderStepped:Connect(function()
             d.txt.Text=plr.Name..(espDist and (" | "..math.floor(dist)) or "")
 
             d.box.Visible=espBox and on
-            d.box.Position=Vector2.new(pos.X-size/2,pos.Y-size)
+d.box.Position=Vector2.new(pos.X-size/2,pos.Y-size)
             d.box.Size=Vector2.new(size,size*1.9)
 
             local hp=hum.Health/hum.MaxHealth
