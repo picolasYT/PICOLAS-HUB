@@ -16,7 +16,8 @@ local UIS = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local UserSettings = UserSettings()
-local MAX_DISTANCE = 15 -- Distancia máxima en studs para que actúe el aimbot
+local MAX_DISTANCE = 60 -- Distancia máxima en studs para que actúe el aimbot
+local TARGET_SWITCH_DISTANCE = 5 -- Distancia extra para cambiar de objetivo
 
 local player = Players.LocalPlayer
 local cam = workspace.CurrentCamera
@@ -83,7 +84,7 @@ killAuraRadius=15
 local aimbotEnabled=false
 local aimbotMode="Normal"
 local targetPart="Head"
-local aimbotFOV=80
+local aimbotFOV=120
 local circleRadius=150
 local smoothSpeed=0.18
 local autoShoot=false
@@ -369,7 +370,10 @@ local function getClosest()
     return best
 end
 
-CombatTab:CreateToggle({Name="Botón Mobile",Callback=function(v)mobileHeld=v end})
+local function isAiming()
+    return true
+end
+
 local function isAiming()
     if UIS.MouseEnabled then
         return UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
