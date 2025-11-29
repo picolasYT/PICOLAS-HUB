@@ -1,11 +1,10 @@
 -- ☆ PICOLAS HUB PRO V5 (FUSION ULTIMATE EDITION) ☆
 -- MOV | VISUAL PRO | TELEPORT | SYSTEM | COMBAT | AIMBOT PRO (MOBILE)
 -- Aimbot nuevo | Freecam completo | Todo recuperado
-
 -- Desarrollado por PICOLAS 🔥
 
-if getgenv().PicolasHubV4 then return end
-getgenv().PicolasHubV4 = true
+if getgenv().PicolasHubV5 then return end
+getgenv().PicolasHubV5 = true
 
 ------------------------------------------------
 -- LIBRERÍAS / SERVICIOS
@@ -18,6 +17,7 @@ local TeleportService = game:GetService("TeleportService")
 local Lighting = game:GetService("Lighting")
 local UserSettings = UserSettings()
 local MAX_DISTANCE = 15 -- Distancia máxima en studs para que actúe el aimbot
+local MAX_DOWN_ANGLE = -35 -- grados máximos hacia abajo permitidos
 
 local player = Players.LocalPlayer
 local cam = workspace.CurrentCamera
@@ -47,9 +47,9 @@ end)
 -- UI
 ------------------------------------------------
 local Window = Rayfield:CreateWindow({
-    Name = "☆ PICOLAS HUB PRO V4 ☆",
+    Name = "☆ PICOLAS HUB PRO V5 ☆",
     LoadingTitle = "PICOLAS HUB",
-    LoadingSubtitle = "FUSION ULTIMATE",
+    LoadingSubtitle = "El mejor script de ROBLOX está cargando...",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = "PicolasHub",
@@ -213,6 +213,8 @@ end
 ------------------------------------------------
 local espText,espBox,espHP,espDist,espHL=false,false,false,false,false
 local espObjects={}
+local espLines = false
+local lineOrigin = "Screen" -- "Screen", "Bottom", "Player"
 
 local function clearESP()
     for _,d in pairs(espObjects) do
@@ -227,6 +229,10 @@ local function makeESP(plr)
     d.txt=Drawing.new("Text"); d.txt.Center=true; d.txt.Outline=true; d.txt.Size=16; d.txt.Visible=false
     d.box=Drawing.new("Square"); d.box.Thickness=1; d.box.Visible=false
     d.hp=Drawing.new("Line"); d.hp.Thickness=2; d.hp.Visible=false
+    d.line = Drawing.new("Line")
+d.line.Thickness = 2
+d.line.Color = Color3.fromRGB(255,0,0)
+d.line.Visible = false
     d.hl=Instance.new("Highlight"); d.hl.Enabled=false; d.hl.FillTransparency=.7; d.hl.Parent=plr
     espObjects[plr]=d
 end
@@ -267,6 +273,30 @@ RunService.RenderStepped:Connect(function()
             if espHL then
                 d.hl.Enabled=true; d.hl.Adornee=ch; d.hl.FillColor=Color3.fromRGB(255,0,0)
             else d.hl.Enabled=false end
+
+            -- ✅ ESP LINE / TRACER
+if espLines then
+    local from
+
+    if lineOrigin == "Screen" then
+        from = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y/2)
+    elseif lineOrigin == "Bottom" then
+        from = Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
+    else -- Player
+        local myRoot = character:FindFirstChild("HumanoidRootPart")
+        if myRoot then
+            local p,_ = cam:WorldToViewportPoint(myRoot.Position)
+            from = Vector2.new(p.X, p.Y)
+        end
+    end
+
+    d.line.From = from
+    d.line.To = Vector2.new(pos.X, pos.Y)
+    d.line.Visible = true
+else
+    d.line.Visible = false
+end
+
         else
             if d.txt then d.txt.Visible=false end
             if d.box then d.box.Visible=false end
@@ -280,71 +310,53 @@ end)
 -- AIMBOT NUEVO
 ------------------------------------------------
 local function getClosest()
-    local mouse = UIS:GetMouseLocation()
-    local best, bestScore = nil, math.huge
-
     local myRoot = character:FindFirstChild("HumanoidRootPart")
     if not myRoot then return nil end
 
+    local closestPlayer = nil
+    local closestDistance = math.huge
+
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= player and plr.Character then
+
             local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-            local part = getTargetPart(plr.Character)
             local enemyRoot = plr.Character:FindFirstChild("HumanoidRootPart")
+            local part = getTargetPart(plr.Character)
 
-            if hum and part and enemyRoot and hum.Health > 0 then
+            if hum and enemyRoot and part and hum.Health > 0 then
 
-                -- ✅ DISTANCIA REAL
-                local realDistance = (enemyRoot.Position - myRoot.Position).Magnitude
-                if realDistance <= MAX_DISTANCE then
+                -- ignorar teammates
+                if ignoreTeam and sameTeam(player, plr) then
+                    continue
+                end
 
-                    -- ✅ NO APUNTAR HACIA ABAJO
-                    local cameraY = cam.CFrame.Position.Y
-                    if enemyRoot.Position.Y >= cameraY then
+                -- distancia REAL
+                local distance = (enemyRoot.Position - myRoot.Position).Magnitude
 
-                        if not (ignoreTeam and sameTeam(player, plr)) then
-                            local sp, on = cam:WorldToScreenPoint(part.Position)
-                            if on then
-                                local d2 = (Vector2.new(sp.X, sp.Y) - mouse).Magnitude
-                                local score = 1e9
+                -- respetar límite de rango
+                if distance <= MAX_DISTANCE then
 
-                                if aimbotMode == "Circle" then
-                                    if d2 <= circleRadius then
-                                        score = d2
-                                    end
+                    -- 🚫 NO APUNTAR DEMASIADO HACIA ABAJO
+                    local dir = (part.Position - cam.CFrame.Position).Unit
+                    local verticalAngle = math.deg(math.asin(dir.Y))
 
-                                elseif aimbotMode == "Normal" then
-                                    local ang = math.deg(
-                                        math.acos(
-                                            cam.CFrame.LookVector:Dot(
-                                                (part.Position - cam.CFrame.Position).Unit
-                                            )
-                                        )
-                                    )
-                                    if ang <= aimbotFOV / 2 then
-                                        score = ang
-                                    end
+                    if verticalAngle < MAX_DOWN_ANGLE then
+                        continue
+                    end
 
-                                else -- 360
-                                    score = realDistance
-                                end
+                    -- quedarse con el MÁS CERCANO
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closestPlayer = plr
+                    end
 
-                                if score < bestScore then
-                                    bestScore = score
-                                    best = plr
-                                end
-                            end
-                        end
-
-                    end -- ← fin NO HACIA ABAJO
-                end -- fin distancia
+                end
             end
         end
     end
 
-    return best
+    return closestPlayer
 end
-
 
 CombatTab:CreateToggle({Name="Botón Mobile",Callback=function(v)mobileHeld=v end})
 local function isAiming()
@@ -433,6 +445,20 @@ VisTab:CreateToggle({Name="ESP Caja",Callback=function(v)espBox=v end})
 VisTab:CreateToggle({Name="ESP Vida",Callback=function(v)espHP=v end})
 VisTab:CreateToggle({Name="Distancia",Callback=function(v)espDist=v end})
 VisTab:CreateToggle({Name="Wallhack",Callback=function(v)espHL=v end})
+VisTab:CreateToggle({
+    Name="ESP Lines",
+    Callback=function(v)
+        espLines = v
+    end
+})
+
+VisTab:CreateDropdown({
+    Name="Origen de líneas",
+    Options={"Screen","Bottom","Player"},
+    Callback=function(v)
+        lineOrigin = v
+    end
+})
 
 CombatTab:CreateToggle({Name="Aimbot",Callback=function(v)aimbotEnabled=v end})
 CombatTab:CreateDropdown({Name="Modo",Options={"Normal","360","Circle"},Callback=function(v)aimbotMode=v end})
